@@ -11,7 +11,7 @@ conn = st.connection("gsheets", type=GSheetsConnection)
 
 try:
     # Leemos la pestaña LISTADO
-    df = conn.read(worksheet="LISTADO", ttl="0")
+    df = conn.read(ttl="0")  # Prueba primero sin especificar worksheet para ver si carga la primera pestaña
     # Leemos la pestaña DOCENTES
     df_docentes = conn.read(worksheet="DOCENTES", ttl="0")
     
