@@ -44,7 +44,7 @@ FORM_ASISTENCIA = "https://docs.google.com/forms/d/e/1FAIpQLSef94w2FNw2XTqRo9ZRn
 st.sidebar.title("🎵 SDF Panel")
 menu = st.sidebar.radio(
     "Selecciona una función:",
-    ["📋 Asistencia Diaria", "🎻 Avaliación", "📊 Consulta de Rexistros"]
+    ["📋 Asistencia Diaria", "🎻 Avaliación", "📊 Consulta de Rexistros", "📝 Bitácora ou Libro Diario"]
 )
 
 try:
