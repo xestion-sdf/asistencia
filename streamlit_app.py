@@ -2,24 +2,16 @@ import streamlit as st
 import pandas as pd
 from datetime import datetime
 
-st.set_page_config(page_title="Control Orquesta SDF", layout="wide")
+st.set_page_config(page_title="SDF - Asistencia Rápida", layout="wide")
 
+# URLs estables
 URL_LISTADO = "https://docs.google.com/spreadsheets/d/1wR4oDqNV5QheGx7wp-H9-s6De2IMAynSf_9vLGbE5qI/export?format=csv&gid=320023"
 URL_DOCENTES = "https://docs.google.com/spreadsheets/d/1wR4oDqNV5QheGx7wp-H9-s6De2IMAynSf_9vLGbE5qI/export?format=csv&gid=1283708974"
 
-st.title("🎻 Gestión de Orquestas SDF")
-
+@st.cache_data(ttl=300) # Guardamos los datos 5 min para que no cargue en cada clic
 def cargar_datos(url):
-    url_final = f"{url}&cache={datetime.now().timestamp()}"
-    df = pd.read_csv(url_final)
+    df = pd.read_csv(f"{url}&timestamp={datetime.now().day}")
     df.columns = df.columns.str.strip()
-    
-    # Aseguramos que las columnas sean texto para evitar el error de FLOAT
-    columnas_texto = ["V/F", "Actitud", "Observaciones", "Nota"]
-    for col in columnas_texto:
-        if col in df.columns:
-            df[col] = df[col].astype(str).replace("nan", "")
-            
     return df
 
 try:
@@ -29,44 +21,63 @@ try:
     st.sidebar.header("Configuración")
     docente_sel = st.sidebar.selectbox("Docente", ["Selecciona..."] + df_docentes.iloc[:,0].dropna().unique().tolist())
     orquesta_sel = st.sidebar.selectbox("Orquesta", df_maestro["Orquesta"].unique())
-    fecha_hoy = st.sidebar.date_input("Fecha", datetime.now())
     
+    # Filtrar y ordenar alfabéticamente para que NUNCA cambie el orden
     df_filtrado = df_maestro[
         (df_maestro["Orquesta"] == orquesta_sel) & 
         (df_maestro["Estado"].str.upper() == "ACTIVO")
-    ].copy()
-    
+    ].sort_values(by="NNA").copy()
+
     if docente_sel == "Selecciona...":
-        st.info("👈 Selecciona un docente en la barra lateral.")
-    elif not df_filtrado.empty:
-        st.subheader(f"Lista de {orquesta_sel}")
-        
-        # --- EL CAMBIO ESTÁ AQUÍ ---
-        df_editado = st.data_editor(
-            df_filtrado[["NNA", "Instrumento", "V/F", "Actitud", "Nota", "Observaciones"]],
-            column_config={
-                "NNA": st.column_config.Column("Alumno", disabled=True),
-                "Instrumento": st.column_config.Column("Instrumento", disabled=True),
-                
-                # Configuramos V/F como un desplegable (Selectbox)
-                "V/F": st.column_config.SelectboxColumn(
-                    "Asistencia",
-                    options=["P", "FX", "FNX"],
-                    required=True
-                ),
-                
-                "Observaciones": st.column_config.TextColumn("Observaciones", width="large")
-            },
-            hide_index=True,
-            use_container_width=True
-        )
-        
-        if st.button("🚀 Procesar Asistencia"):
-            st.success("¡Datos capturados correctamente!")
-            st.dataframe(df_editado)
-            
+        st.info("👈 Selecciona docente")
     else:
-        st.warning("No hay alumnos activos para esta orquesta.")
+        st.subheader(f"Lista {orquesta_sel}")
+        
+        # Diccionario para guardar lo que marques sin recargar la página
+        asistencias = {}
+        observaciones = {}
+
+        # CREAMOS UNA FILA POR ALUMNO (Mucho más rápido)
+        for i, row in df_filtrado.iterrows():
+            with st.container():
+                col1, col2, col3 = st.columns([2, 2, 3])
+                
+                with col1:
+                    st.write(f"**{row['NNA']}**")
+                    st.caption(row['Instrumento'])
+                
+                with col2:
+                    # Usamos un radio horizontal para que sea un solo clic
+                    asistencias[row['NNA']] = st.radio(
+                        f"Asistencia_{row['NNA']}",
+                        options=["P", "FX", "FNX"],
+                        horizontal=True,
+                        label_visibility="collapsed",
+                        key=f"asist_{row['NNA']}"
+                    )
+                
+                with col3:
+                    observaciones[row['NNA']] = st.text_input(
+                        "Obs", 
+                        placeholder="Nota u obs...", 
+                        label_visibility="collapsed",
+                        key=f"obs_{row['NNA']}"
+                    )
+                st.markdown("---")
+
+        if st.button("🚀 GUARDAR TODO EL LISTADO"):
+            # Aquí construimos el resultado final
+            resumen = []
+            for nombre in asistencias:
+                resumen.append({
+                    "Fecha": datetime.now().strftime("%d/%m/%Y"),
+                    "Alumno": nombre,
+                    "Asistencia": asistencias[nombre],
+                    "Observaciones": observaciones[nombre]
+                })
+            
+            st.success("¡Datos listos para enviar!")
+            st.table(pd.DataFrame(resumen))
 
 except Exception as e:
-    st.error(f"Error al cargar: {e}")
+    st.error(f"Error: {e}")
