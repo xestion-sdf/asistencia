@@ -146,49 +146,57 @@ try:
                 st.success("✅ Simulación de envío exitosa. (Conecta la URL del form para envío real)")
                 del st.session_state.temp_eval
 
-    # --- PÁGINA 3: CONSULTA DE REGISTROS (CORREGIDA) ---
+   # --- PÁGINA 3: CONSULTA DE REGISTROS (YA CON CONEXIÓN) ---
     elif menu == "📊 Consulta de Registros":
-        st.header("Historial y Seguimiento")
-        
-        # Intentamos cargar el historial
+        st.header("Historial y Seguimiento de Alumnos")
         df_hist = cargar_datos(URL_HISTORIAL)
         
-        # Verificamos si los datos realmente se cargaron
         if df_hist is not None and not df_hist.empty:
-            tab1, tab2 = st.tabs(["📅 Por Día", "📈 Por Alumno"])
+            # Mostramos un buscador rápido para no tener que scrollear
+            tab1, tab2 = st.tabs(["📅 Vista por Día", "👤 Expediente por Alumno"])
             
             with tab1:
-                f_busq = st.date_input("Día a consultar", datetime.now())
-                f_str_1 = f_busq.strftime("%Y-%m-%d")
-                f_str_2 = f_busq.strftime("%-d/%-m/%Y") # Formatos comunes de Google
+                f_busq = st.date_input("Consultar fecha:", datetime.now())
+                f_str = f_busq.strftime("%-d/%-m/%Y") # Formato estándar de Google
                 
-                mask = df_hist.iloc[:, 0].astype(str).str.contains(f_str_1, na=False) | \
-                       df_hist.iloc[:, 0].astype(str).str.contains(f_str_2, na=False)
-                res_dia = df_hist[mask]
+                # Filtrar por la primera columna (Marca Temporal)
+                res_dia = df_hist[df_hist.iloc[:, 0].astype(str).str.contains(f_str, na=False)]
                 
                 if not res_dia.empty:
+                    st.success(f"Se encontraron {len(res_dia)} registros para el día seleccionado.")
                     st.dataframe(res_dia, use_container_width=True)
                 else:
-                    st.info(f"No hay registros para la fecha {f_busq.strftime('%d/%m/%Y')}")
+                    st.info("No hay registros guardados para esta fecha.")
 
             with tab2:
                 al_lista = df_maestro[df_maestro["Orquesta"] == orquesta_sel]["NNA"].unique()
-                al_busq = st.selectbox("Selecciona Alumno", al_lista)
+                al_busq = st.selectbox("Seleccione el alumno para ver su historial:", al_lista)
                 
-                mask_al = df_hist.apply(lambda row: row.astype(str).str.contains(al_busq).any(), axis=1)
-                res_al = df_hist[mask_al]
+                # Buscamos al alumno en la columna correspondiente (ajusta el índice si es necesario, 
+                # aquí busca en todo el documento para mayor seguridad)
+                res_al = df_hist[df_hist.apply(lambda row: row.astype(str).str.contains(al_busq).any(), axis=1)].copy()
                 
                 if not res_al.empty:
-                    # Conteo de faltas FNX
-                    total_fnx = res_al.astype(str).apply(lambda x: x.str.contains('FNX')).sum().sum()
-                    st.metric("Faltas No Justificadas (FNX)", total_fnx)
+                    # Contamos las faltas buscando el texto exacto 'FNX'
+                    # Convertimos la tabla a un solo texto gigante para contar rápido
+                    conteo_texto = res_al.astype(str).values.flatten()
+                    faltas_graves = sum(1 for x in conteo_texto if 'FNX' in x)
+                    asistencias = sum(1 for x in conteo_texto if x == 'P')
+                    
+                    # Panel de indicadores
+                    col1, col2 = st.columns(2)
+                    col1.metric("Asistencias Registradas", asistencias)
+                    col2.metric("FALTAS NO JUSTIFICADAS", faltas_graves, delta_color="inverse")
+                    
+                    if faltas_graves >= 3:
+                        st.error(f"⚠️ Alerta: {al_busq} ha superado el límite de 3 faltas no justificadas.")
+                    
+                    st.write("### Detalle de registros encontrados:")
                     st.dataframe(res_al, use_container_width=True)
                 else:
-                    st.info("Sin registros previos.")
+                    st.info(f"No existen registros previos para {al_busq} en esta orquesta.")
         else:
-            # Este es el mensaje rojo que ves. Significa que URL_HISTORIAL no devuelve datos.
-            st.error("⚠️ Error de Conexión: No se pudo leer la hoja de historial.")
-            st.info("Asegúrate de que el GID_HISTORIAL en el código sea el número correcto de la pestaña de respuestas.")
+            st.error("El historial está vacío o no se pudo leer correctamente.")
 
 except Exception as e:
     st.error(f"Error General: {e}")
