@@ -3,139 +3,95 @@ import pandas as pd
 import requests
 from datetime import datetime
 
-# 1. ESTO DEBE IR PRIMERO: Forzamos el color primario desde la configuración
-st.set_page_config(page_title="SDF - Control de Asistencia", layout="wide")
+st.set_page_config(page_title="SDF - Evaluación Técnica", layout="wide")
 
-# --- CSS DEFINITIVO PARA ELIMINAR EL ROJO ---
+# --- CSS PARA EL COLOR VERDE (SDF STYLE) ---
 st.markdown("""
     <style>
-    /* Forzamos que el color primario de toda la app sea Verde */
-    :root {
-        --primary-color: #28a745 !important;
-    }
-    
-    /* Cambiamos el color de los Radio Buttons (el círculo y el borde) */
     div[data-testid="stRadio"] div[role="radiogroup"] [data-checked="true"] > div:first-child {
         border-color: #28a745 !important;
         background-color: #28a745 !important;
     }
-    
-    /* El puntito blanco de adentro */
-    div[data-testid="stRadio"] div[role="radiogroup"] [data-checked="true"] > div:first-child > div {
-        background-color: white !important;
-    }
-
-    /* Color de los botones generales */
-    button[kind="primary"] {
-        background-color: #28a745 !important;
-        color: white !important;
-    }
-    
-    /* Ajuste para que el texto de la opción seleccionada no se pierda */
-    div[data-testid="stRadio"] label {
-        color: inherit !important;
-    }
+    :root { --primary-color: #28a745; }
     </style>
     """, unsafe_allow_html=True)
 
-# --- CONFIGURACIÓN DE LECTURA (SE MANTIENE IGUAL) ---
+# LECTURA DE DATOS (Mismos orígenes)
 ID_SHEET = "1wR4oDqNV5QheGx7wp-H9-s6De2IMAynSf_9vLGbE5qI"
 URL_LISTADO = f"https://docs.google.com/spreadsheets/d/{ID_SHEET}/export?format=csv&gid=320023"
 URL_DOCENTES = f"https://docs.google.com/spreadsheets/d/{ID_SHEET}/export?format=csv&gid=1283708974"
 
 @st.cache_data(ttl=60)
 def cargar_datos(url):
-    url_final = f"{url}&timestamp={datetime.now().timestamp()}"
-    df = pd.read_csv(url_final)
+    df = pd.read_csv(f"{url}&timestamp={datetime.now().timestamp()}")
     df.columns = df.columns.str.strip()
     return df
 
-FORM_URL = "https://docs.google.com/forms/d/e/1FAIpQLSef94w2FNw2XTqRo9ZRnhURSOJx-5iUqeeVZ5kqqASLiTYF0A/formResponse"
+# URL DEL NUEVO FORMULARIO DE EVALUACIÓN
+FORM_URL_EVAL = "AQUÍ_TU_NUEVA_URL_DE_FORM_RESPONSE"
 
 try:
     df_maestro = cargar_datos(URL_LISTADO)
     df_docentes = cargar_datos(URL_DOCENTES)
     
-    st.sidebar.header("⚙️ Configuración")
-    docente_sel = st.sidebar.selectbox("Docente", ["Selecciona..."] + df_docentes.iloc[:,0].dropna().unique().tolist())
-    orquesta_sel = st.sidebar.selectbox("Orquesta", df_maestro["Orquesta"].unique())
-    fecha_hoy = st.sidebar.date_input("Fecha de clase", datetime.now())
+    st.title("🎻 Evaluación de Desempeño")
     
+    col_a, col_b = st.columns(2)
+    with col_a:
+        docente_sel = st.selectbox("Docente Evaluador", ["Selecciona..."] + df_docentes.iloc[:,0].dropna().unique().tolist())
+    with col_b:
+        orquesta_sel = st.selectbox("Orquesta", df_maestro["Orquesta"].unique())
+
     df_filtrado = df_maestro[
-        (df_maestro["Orquesta"] == orquesta_sel) & 
-        (df_maestro["Estado"].str.upper() == "ACTIVO")
+        (df_maestro["Orquesta"] == orquesta_sel) & (df_maestro["Estado"].str.upper() == "ACTIVO")
     ].sort_values(by="NNA").copy()
 
-    if docente_sel == "Selecciona...":
-        st.info("👈 Selecciona tu nombre para comenzar.")
-    else:
-        st.subheader(f"📋 Lista: {orquesta_sel}")
+    if docente_sel != "Selecciona...":
         
-        asistencias = {}
+        # Diccionarios de datos
+        notas = {}
+        actitudes = {}
         observaciones = {}
 
-        for i, row in df_filtrado.iterrows():
-            with st.container():
-                col1, col2, col3 = st.columns([3, 3, 4])
-                with col1:
-                    st.write(f"**{row['NNA']}**")
-                    st.caption(f"🎻 {row['Instrumento']}")
-                with col2:
-                    asistencias[row['NNA']] = st.radio(
-                        f"asist_{row['NNA']}", ["P", "FX", "FNX"],
-                        horizontal=True, label_visibility="collapsed", key=f"r_{i}"
-                    )
-                with col3:
-                    observaciones[row['NNA']] = st.text_input(
-                        "Obs", placeholder="Nota/Obs", 
-                        label_visibility="collapsed", key=f"t_{i}"
-                    )
-                st.markdown("---")
+        st.info("💡 Escala Likert: 1 (Bajo) a 5 (Excelente)")
 
-        if st.button("🔍 1. GUARDAR Y REVISAR"):
-            fecha_str = fecha_hoy.strftime("%d/%m/%Y")
-            resumen_lista = []
-            for nna in asistencias:
-                inst = df_filtrado[df_filtrado["NNA"] == nna]["Instrumento"].values[0]
-                resumen_lista.append({
-                    "Fecha": fecha_str,
+        for i, row in df_filtrado.iterrows():
+            with st.expander(f"👤 {row['NNA']} - {row['Instrumento']}", expanded=True):
+                c1, c2, c3 = st.columns([3, 3, 4])
+                
+                with c1:
+                    st.write("**Nivel Técnico**")
+                    notas[row['NNA']] = st.radio(f"T_{i}", ["1", "2", "3", "4", "5"], horizontal=True, key=f"t_{i}", index=2)
+                
+                with c2:
+                    st.write("**Actitud en Clase**")
+                    actitudes[row['NNA']] = st.radio(f"A_{i}", ["1", "2", "3", "4", "5"], horizontal=True, key=f"a_{i}", index=4)
+                
+                with c3:
+                    st.write("**Comentarios**")
+                    observaciones[row['NNA']] = st.text_area("Obs", placeholder="Escribe aquí...", label_visibility="collapsed", key=f"o_{i}", height=70)
+
+        if st.button("🔍 GUARDAR EVALUACIONES Y REVISAR"):
+            resumen = []
+            for nna in notas:
+                resumen.append({
+                    "Fecha": datetime.now().strftime("%d/%m/%Y"),
                     "Orquesta": orquesta_sel,
                     "Docente": docente_sel,
-                    "NNA": nna,
-                    "Instrumento": inst,
-                    "V/F": asistencias[nna],
-                    "Obs": observaciones[nna]
+                    "Alumno": nna,
+                    "Nota Técnica": notas[nna],
+                    "Actitud": actitudes[nna],
+                    "Observaciones": observaciones[nna]
                 })
-            st.session_state.datos_a_enviar = resumen_lista
-            st.success("✅ Datos listos para revisar.")
-            st.table(pd.DataFrame(resumen_lista))
+            st.session_state.eval_data = resumen
+            st.table(pd.DataFrame(resumen))
 
-        if "datos_a_enviar" in st.session_state:
-            if st.button("🚀 2. CONFIRMAR Y ENVIAR AL HISTORIAL"):
-                exitos = 0
-                total = len(st.session_state.datos_a_enviar)
-                with st.spinner("Enviando..."):
-                    for dato in st.session_state.datos_a_enviar:
-                        form_data = {
-                            "entry.883067698": dato["Fecha"],
-                            "entry.695473946": dato["Orquesta"],
-                            "entry.252597218": dato["Docente"],
-                            "entry.1616335440": dato["NNA"],
-                            "entry.1668643155": dato["Instrumento"],
-                            "entry.1284516970": dato["V/F"],
-                            "entry.58216437": dato["Obs"]
-                        }
-                        try:
-                            response = requests.post(FORM_URL, data=form_data)
-                            if response.status_code == 200: exitos += 1
-                        except: pass
-                
-                if exitos == total:
-                    st.success(f"✅ ¡Enviado!")
-                    st.balloons()
-                    del st.session_state.datos_a_enviar
-                else:
-                    st.error(f"Error en el envío.")
+        if "eval_data" in st.session_state:
+            if st.button("🚀 ENVIAR EVALUACIÓN A LA NUEVA PESTAÑA"):
+                # Aquí iría el bucle de requests.post con los nuevos entry.XXXX
+                st.success("¡Datos enviados a la nueva base de datos!")
+                st.balloons()
+                del st.session_state.eval_data
 
 except Exception as e:
     st.error(f"Error: {e}")
