@@ -228,7 +228,7 @@ try:
             st.error("El historial está vacío o no se pudo leer correctamente.")
 
 # --- NUEVA PÁGINA: BITÁCORA DE INCIDENCIAS Y LOGROS ---
-    elif menu == "📝 Bitácora o Libro Diario":
+    elif menu == "📝 Bitácora ou Libro Diario":
         st.header("Registro de Incidencias y Comentarios Positivos")
         st.info("Utiliza este espacio para documentar situaciones relevantes o logros destacados.")
 
