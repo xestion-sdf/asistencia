@@ -21,13 +21,16 @@ ID_SHEET = "1wR4oDqNV5QheGx7wp-H9-s6De2IMAynSf_9vLGbE5qI"
 URL_LISTADO = f"https://docs.google.com/spreadsheets/d/{ID_SHEET}/export?format=csv&gid=320023"
 URL_DOCENTES = f"https://docs.google.com/spreadsheets/d/{ID_SHEET}/export?format=csv&gid=1283708974"
 
+# --- IMPORTANTE: Cambia este GID por el de tu pestaña de respuestas de Google Sheets ---
+GID_HISTORIAL = "PON_AQUI_EL_GID_DE_TU_HOJA_DE_RESPUESTAS" 
+URL_HISTORIAL = f"https://docs.google.com/spreadsheets/d/{ID_SHEET}/export?format=csv&gid={GID_HISTORIAL}"
+
 @st.cache_data(ttl=60)
 def cargar_datos(url):
     df = pd.read_csv(f"{url}&timestamp={datetime.now().timestamp()}")
     df.columns = df.columns.str.strip()
     return df
 
-# URLs de Google Forms (Actualiza estas con tus nuevos formularios cuando los tengas)
 FORM_ASISTENCIA = "https://docs.google.com/forms/d/e/1FAIpQLSef94w2FNw2XTqRo9ZRnhURSOJx-5iUqeeVZ5kqqASLiTYF0A/formResponse"
 FORM_EVAL_INTEGRAL = "TU_NUEVA_URL_AQUI" 
 
@@ -35,7 +38,7 @@ FORM_EVAL_INTEGRAL = "TU_NUEVA_URL_AQUI"
 st.sidebar.title("🎵 SDF Panel")
 menu = st.sidebar.radio(
     "Selecciona una función:",
-    ["📋 Asistencia Diaria", "🎻 Evaluación Técnica", "🧠 Evaluación Actitudinal"]
+    ["📋 Asistencia Diaria", "🎻 Evaluación Técnica", "🧠 Evaluación Actitudinal", "📊 Consulta de Registros"]
 )
 
 try:
@@ -92,15 +95,40 @@ try:
             st.session_state.temp_eval = resumen_ev
             st.table(pd.DataFrame(resumen_ev))
 
-    # --- PÁGINA 3: ACTITUDINAL (PROVISIONAL) ---
+    # --- PÁGINA 3: ACTITUDINAL ---
     elif menu == "🧠 Evaluación Actitudinal":
         st.header("Notas Actitudinales")
-        st.write("Esta sección se puede usar para reportes de conducta específicos.")
+        st.write("Esta sección se mantiene para reportes específicos.")
 
-# --- CIERRE DEL BLOQUE PRINCIPAL ---
+    # --- PÁGINA 4: CONSULTA (NUEVA) ---
+    elif menu == "📊 Consulta de Registros":
+        st.header("Historial de Registros")
+        try:
+            df_hist = cargar_datos(URL_HISTORIAL)
+            tab1, tab2 = st.tabs(["📅 Por Día", "👤 Por Alumno"])
+            
+            with tab1:
+                f_busq = st.date_input("Día a consultar", datetime.now())
+                f_str = f_busq.strftime("%d/%m/%Y")
+                res_dia = df_hist[df_hist.iloc[:, 1] == f_str] # Ajusta el índice de columna de fecha
+                if not res_dia.empty:
+                    st.dataframe(res_dia, use_container_width=True)
+                else:
+                    st.info("No hay registros en esta fecha.")
+            
+            with tab2:
+                al_lista = df_maestro[df_maestro["Orquesta"] == orquesta_sel]["NNA"].unique()
+                al_busq = st.selectbox("Selecciona Alumno", al_lista)
+                res_al = df_hist[df_hist.iloc[:, 4] == al_busq] # Ajusta el índice de columna de NNA
+                if not res_al.empty:
+                    st.dataframe(res_al, use_container_width=True)
+                else:
+                    st.info("Sin registros para este alumno.")
+        except:
+            st.error("Aún no se puede acceder al historial. Verifica el GID.")
+
 except Exception as e:
-    st.error(f"Hubo un error al cargar los datos: {e}")
+    st.error(f"Error: {e}")
 
-# --- PIE DE PÁGINA ---
 st.sidebar.markdown("---")
 st.sidebar.caption("SDF - Sistema de Gestión 2026")
