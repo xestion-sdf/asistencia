@@ -6,7 +6,7 @@ st.set_page_config(page_title="SDF - Asistencia Rápida", layout="wide")
 
 # URLs estables
 URL_LISTADO = "https://docs.google.com/spreadsheets/d/1wR4oDqNV5QheGx7wp-H9-s6De2IMAynSf_9vLGbE5qI/export?format=csv&gid=320023"
-URL_DOCENTES = "https://docs.google.com/spreadsheets/d/1wR4oDqNV5QheGx7wp-H9-s6De2IMAynSf_9vLGbE5qI/export?format=csv&gid=485552718"
+URL_DOCENTES = "https://docs.google.com/spreadsheets/d/1wR4oDqNV5QheGx7wp-H9-s6De2IMAynSf_9vLGbE5qI/export?format=csv&gid=1283708974"
 
 @st.cache_data(ttl=300) # Guardamos los datos 5 min para que no cargue en cada clic
 def cargar_datos(url):
