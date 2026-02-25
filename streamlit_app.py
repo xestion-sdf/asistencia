@@ -100,8 +100,8 @@ try:
                 del st.session_state.temp_asistencia
 
 # --- PÁGINA 2: EVALUACIÓN MULTIDIMENSIONAL (SISTEMA INTEGRAL) ---
-    elif menu == "🎻 Evaluación Técnica":
-        st.header("Evaluación Integral de Dimensiones")
+    elif menu == "🎻 Avaliación":
+        st.header("Avaliación Integral de Dimensións")
         
         # Selector de dimensión
         dimension = st.selectbox(
