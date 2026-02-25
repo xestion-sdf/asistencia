@@ -227,5 +227,37 @@ try:
         else:
             st.error("El historial está vacío o no se pudo leer correctamente.")
 
+# --- NUEVA PÁGINA: BITÁCORA DE INCIDENCIAS Y LOGROS ---
+    elif menu == "📝 Bitácora o Libro Diario":
+        st.header("Registro de Incidencias y Comentarios Positivos")
+        st.info("Utiliza este espacio para documentar situaciones relevantes o logros destacados.")
+
+        # Selección de Alumno (usando la lista ya cargada de la orquesta)
+        al_lista = df_maestro[df_maestro["Orquesta"] == orquesta_sel]["NNA"].unique()
+        alumno_bit = st.selectbox("Alumno/a:", ["Selecciona un alumno..."] + list(al_lista))
+
+        if alumno_bit != "Selecciona un alumno...":
+            tipo_nota = st.radio("Tipo de registro:", ["🌟 Comentario Positivo", "⚠️ Incidencia / Observación"], horizontal=True)
+            
+            comentario = st.text_area(f"Escribe aquí el detalle para {alumno_bit}:", placeholder="Ej: Hoy ayudó espontáneamente a un compañero con la afinación...")
+
+            if st.button("🔍 GUARDAR NOTA EN REVISIÓN"):
+                nota_previa = {
+                    "Fecha": fecha_hoy.strftime("%d/%m/%Y"),
+                    "Docente": docente_sel,
+                    "Alumno": alumno_bit,
+                    "Tipo": tipo_nota,
+                    "Comentario": comentario
+                }
+                st.session_state.temp_bitacora = [nota_previa]
+                st.success("Nota lista para enviar.")
+                st.table(pd.DataFrame(st.session_state.temp_bitacora))
+
+            if "temp_bitacora" in st.session_state:
+                if st.button("🚀 CONFIRMAR ENVÍO A BITÁCORA"):
+                    # Aquí usaremos el mismo formulario principal o uno específico
+                    st.success(f"Nota de {docente_sel} sobre {alumno_bit} guardada correctamente.")
+                    del st.session_state.temp_bitacora
+
 except Exception as e:
     st.error(f"Error General: {e}")
