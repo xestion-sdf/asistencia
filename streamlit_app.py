@@ -117,10 +117,50 @@ try:
         # Lógica similar para Técnica...
         st.info("Pestaña en desarrollo: Configura el nuevo formulario para activar el envío.")
 
-    elif menu == "🧠 Evaluación Actitudinal":
-        st.header("Evaluación Actitudinal (Escala 1-5)")
-        # Lógica similar para Actitud...
-        st.info("Pestaña en desarrollo: Configura el nuevo formulario para activar el envío.")
+# --- DENTRO DE LA PESTAÑA DE EVALUACIÓN ---
+elif menu == "🎻 Evaluación Técnica":
+    st.header("Evaluación Integral de Desempeño")
+    st.info("Despliega cada alumno para calificar los 4 indicadores (1: Inicial - 5: Excelente)")
+    
+    # Diccionarios para guardar las 4 notas por alumno
+    eval_completa = {}
+
+    for i, row in df_filtrado.iterrows():
+        # Usamos un expansor para que la lista sea scannable
+        with st.expander(f"👤 {row['NNA']} ({row['Instrumento']})"):
+            c1, c2 = st.columns(2)
+            
+            with c1:
+                nota_tec = st.radio(f"Técnica - {row['NNA']}", ["1", "2", "3", "4", "5"], 
+                                    horizontal=True, key=f"tec_{i}", index=2)
+                nota_lec = st.radio(f"Lectura - {row['NNA']}", ["1", "2", "3", "4", "5"], 
+                                    horizontal=True, key=f"lec_{i}", index=2)
+            
+            with c2:
+                nota_par = st.radio(f"Participación - {row['NNA']}", ["1", "2", "3", "4", "5"], 
+                                    horizontal=True, key=f"par_{i}", index=4)
+                nota_mat = st.radio(f"Responsabilidad - {row['NNA']}", ["1", "2", "3", "4", "5"], 
+                                    horizontal=True, key=f"mat_{i}", index=4)
+            
+            eval_completa[row['NNA']] = {
+                "Tecnica": nota_tec,
+                "Lectura": nota_lec,
+                "Participacion": nota_par,
+                "Responsabilidad": nota_mat
+            }
+
+    if st.button("🔍 GUARDAR EVALUACIÓN COMPLETA"):
+        resumen_eval = []
+        for nna, valores in eval_completa.items():
+            resumen_eval.append({
+                "NNA": nna,
+                "Téc": valores["Tecnica"],
+                "Lec": valores["Lectura"],
+                "Par": valores["Participacion"],
+                "Res": valores["Responsabilidad"]
+            })
+        st.session_state.temp_eval = resumen_eval
+        st.table(pd.DataFrame(resumen_eval))
 
 except Exception as e:
     st.error(f"Error: {e}")
