@@ -28,12 +28,8 @@ def cargar_datos(url):
     df.columns = df.columns.str.strip()
     return df
 
-# --- CONFIGURACIÓN DE FORMULARIOS ---
-# Formulario de Asistencia (el que ya tienes vinculado)
+# --- CONFIGURACIÓN DE FORMULARIO ASISTENCIA ---
 FORM_ASISTENCIA = "https://docs.google.com/forms/d/e/1FAIpQLSef94w2FNw2XTqRo9ZRnhURSOJx-5iUqeeVZ5kqqASLiTYF0A/formResponse"
-# Aquí pondrías las URLs de los otros formularios cuando los crees
-FORM_EVAL_TECNICA = "URL_FORM_TECNICO"
-FORM_EVAL_ACTITUD = "URL_FORM_ACTITUD"
 
 # --- NAVEGACIÓN LATERAL ---
 st.sidebar.title("🎵 SDF Panel")
@@ -59,7 +55,7 @@ try:
         st.info("👈 Por favor, selecciona tu nombre en el menú lateral para comenzar.")
     
     # ---------------------------------------------------------
-    # PÁGINA 1: ASISTENCIA (CON OBSERVACIONES Y VISTA PREVIA)
+    # PÁGINA 1: ASISTENCIA
     # ---------------------------------------------------------
     elif menu == "📋 Asistencia Diaria":
         st.header(f"Control de Asistencia - {orquesta_sel}")
@@ -79,8 +75,12 @@ try:
             resumen = []
             for nna in asistencias:
                 resumen.append({
-                    "Fecha": fecha_str, "Orquesta": orquesta_sel, "Docente": docente_sel,
-                    "NNA": nna, "Asistencia": asistencias[nna], "Observaciones": observaciones[nna]
+                    "Fecha": fecha_str, 
+                    "Orquesta": orquesta_sel, 
+                    "Docente": docente_sel,
+                    "NNA": nna, 
+                    "Asistencia": asistencias[nna], 
+                    "Observaciones": observaciones[nna]
                 })
             st.session_state.temp_asistencia = resumen
             st.success("✅ Vista previa generada. Revisa la tabla abajo.")
@@ -92,8 +92,35 @@ try:
                 with st.spinner("Enviando..."):
                     for d in st.session_state.temp_asistencia:
                         inst = df_filtrado[df_filtrado["NNA"] == d["NNA"]]["Instrumento"].values[0]
+                        # Mapeo corregido sin saltos de línea peligrosos
                         data = {
-                            "entry.883067698": d["Fecha"], "entry.695473946": d["Orquesta"],
-                            "entry.252597218": d["Docente"], "entry.1616335440": d["NNA"],
-                            "entry.1668643155": inst, "entry.1284516970": d["Asistencia"],
-                            "entry.5821
+                            "entry.883067698": d["Fecha"],
+                            "entry.695473946": d["Orquesta"],
+                            "entry.252597218": d["Docente"],
+                            "entry.1616335440": d["NNA"],
+                            "entry.1668643155": inst,
+                            "entry.1284516970": d["Asistencia"],
+                            "entry.58216437": d["Observaciones"]
+                        }
+                        try:
+                            r = requests.post(FORM_ASISTENCIA, data=data)
+                            if r.status_code == 200: exitos += 1
+                        except: pass
+                st.success(f"✅ ¡Enviado! ({exitos} alumnos)")
+                del st.session_state.temp_asistencia
+
+    # ---------------------------------------------------------
+    # PÁGINA 2 Y 3: Mismo esquema para Evaluación (Estructura base)
+    # ---------------------------------------------------------
+    elif menu == "🎻 Evaluación Técnica":
+        st.header("Evaluación Técnica (Escala 1-5)")
+        # Lógica similar para Técnica...
+        st.info("Pestaña en desarrollo: Configura el nuevo formulario para activar el envío.")
+
+    elif menu == "🧠 Evaluación Actitudinal":
+        st.header("Evaluación Actitudinal (Escala 1-5)")
+        # Lógica similar para Actitud...
+        st.info("Pestaña en desarrollo: Configura el nuevo formulario para activar el envío.")
+
+except Exception as e:
+    st.error(f"Error: {e}")
