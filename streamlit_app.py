@@ -97,74 +97,96 @@ try:
                 st.success(f"✅ ¡Enviado! ({exitos} registros)")
                 del st.session_state.temp_asistencia
 
-    # --- PÁGINA 2: EVALUACIÓN ---
+# --- PÁGINA 2: EVALUACIÓN TÉCNICA (ACTIVADA) ---
     elif menu == "🎻 Evaluación Técnica":
-        st.header("Evaluación Integral")
-        # Aquí iría el código de los expansores (igual que antes)
-        st.write("Configura el formulario de evaluación para activar.")
+        st.header("Evaluación Integral de Desempeño")
+        st.info("Califica del 1 al 5 cada indicador (1: Inicial - 5: Excelente)")
+        
+        eval_completa = {}
 
-# --- PÁGINA 3: CONSULTA DE REGISTROS CON SEMÁFORO DE FALTAS ---
+        for i, row in df_filtrado.iterrows():
+            with st.expander(f"👤 {row['NNA']} ({row['Instrumento']})"):
+                c1, c2 = st.columns(2)
+                
+                with c1:
+                    nota_tec = st.radio(f"Técnica - {row['NNA']}", ["1", "2", "3", "4", "5"], 
+                                        horizontal=True, key=f"tec_{i}", index=2)
+                    nota_lec = st.radio(f"Lectura - {row['NNA']}", ["1", "2", "3", "4", "5"], 
+                                        horizontal=True, key=f"lec_{i}", index=2)
+                
+                with c2:
+                    nota_par = st.radio(f"Participación - {row['NNA']}", ["1", "2", "3", "4", "5"], 
+                                        horizontal=True, key=f"par_{i}", index=4)
+                    nota_mat = st.radio(f"Responsabilidad - {row['NNA']}", ["1", "2", "3", "4", "5"], 
+                                        horizontal=True, key=f"mat_{i}", index=4)
+                
+                eval_completa[row['NNA']] = {
+                    "T": nota_tec, "L": nota_lec, "P": nota_par, "R": nota_mat,
+                    "Instrumento": row['Instrumento']
+                }
+
+        if st.button("🔍 1. GUARDAR Y REVISAR EVALUACIÓN"):
+            resumen_ev = []
+            for nna, v in eval_completa.items():
+                resumen_ev.append({
+                    "Fecha": fecha_hoy.strftime("%d/%m/%Y"),
+                    "Orquesta": orquesta_sel,
+                    "Docente": docente_sel,
+                    "NNA": nna,
+                    "Téc": v["T"], "Lec": v["L"], "Par": v["P"], "Res": v["R"]
+                })
+            st.session_state.temp_eval = resumen_ev
+            st.table(pd.DataFrame(resumen_ev))
+
+        if "temp_eval" in st.session_state:
+            if st.button("🚀 2. CONFIRMAR ENVÍO DE EVALUACIÓN"):
+                # Aquí conectarás el FORM_EVAL_INTEGRAL cuando tengas los IDs
+                st.success("✅ Simulación de envío exitosa. (Conecta la URL del form para envío real)")
+                del st.session_state.temp_eval
+
+    # --- PÁGINA 3: CONSULTA DE REGISTROS (CORREGIDA) ---
     elif menu == "📊 Consulta de Registros":
         st.header("Historial y Seguimiento")
+        
+        # Intentamos cargar el historial
         df_hist = cargar_datos(URL_HISTORIAL)
         
+        # Verificamos si los datos realmente se cargaron
         if df_hist is not None and not df_hist.empty:
-            tab1, tab2 = st.tabs(["📅 Registros por Día", "📈 Resumen por Alumno"])
+            tab1, tab2 = st.tabs(["📅 Por Día", "📈 Por Alumno"])
             
             with tab1:
-                f_busq = st.date_input("Selecciona el día", datetime.now())
+                f_busq = st.date_input("Día a consultar", datetime.now())
                 f_str_1 = f_busq.strftime("%Y-%m-%d")
-                f_str_2 = f_busq.strftime("%d/%m/%Y")
+                f_str_2 = f_busq.strftime("%-d/%-m/%Y") # Formatos comunes de Google
                 
-                # Filtro por fecha en Marca Temporal
-                mask_dia = df_hist.iloc[:, 0].astype(str).str.contains(f_str_1, na=False) | \
-                           df_hist.iloc[:, 0].astype(str).str.contains(f_str_2, na=False)
-                res_dia = df_hist[mask_dia]
+                mask = df_hist.iloc[:, 0].astype(str).str.contains(f_str_1, na=False) | \
+                       df_hist.iloc[:, 0].astype(str).str.contains(f_str_2, na=False)
+                res_dia = df_hist[mask]
                 
                 if not res_dia.empty:
-                    st.write(f"### Registros del {f_busq.strftime('%d/%m/%Y')}")
                     st.dataframe(res_dia, use_container_width=True)
                 else:
-                    st.info("No hay registros para esta fecha.")
+                    st.info(f"No hay registros para la fecha {f_busq.strftime('%d/%m/%Y')}")
 
             with tab2:
                 al_lista = df_maestro[df_maestro["Orquesta"] == orquesta_sel]["NNA"].unique()
-                al_busq = st.selectbox("Selecciona un alumno", al_lista)
+                al_busq = st.selectbox("Selecciona Alumno", al_lista)
                 
-                # Filtramos registros del alumno buscando su nombre en cualquier columna
-                res_al = df_hist[df_hist.apply(lambda row: row.astype(str).str.contains(al_busq).any(), axis=1)].copy()
+                mask_al = df_hist.apply(lambda row: row.astype(str).str.contains(al_busq).any(), axis=1)
+                res_al = df_hist[mask_al]
                 
                 if not res_al.empty:
-                    # --- CONTEO DE ASISTENCIAS ---
-                    # Convertimos todo a texto para buscar los estados
-                    texto_total = res_al.astype(str).values.flatten()
-                    
-                    total_p = sum("P" == x for x in texto_total)
-                    total_fx = sum("FX" == x for x in texto_total)
-                    total_fnx = sum("FNX" == x for x in texto_total)
-
-                    # Mostrar métricas visuales
-                    m1, m2, m3 = st.columns(3)
-                    m1.metric("Presentes (P)", total_p)
-                    m2.metric("Justificadas (FX)", total_fx)
-                    m3.metric("FALTAS SIN JUSTIFICAR (FNX)", total_fnx, delta_color="inverse")
-
-                    # ALERTAS CRÍTICAS
-                    if total_fnx >= 3:
-                        st.error(f"🚨 ALERTA CRÍTICA: {al_busq} tiene {total_fnx} faltas no justificadas.")
-                        st.button("📧 Notificar a Coordinación")
-                    elif total_fnx > 0:
-                        st.warning(f"⚠️ El alumno registra {total_fnx} inasistencias sin justificación.")
-
-                    st.write("### Detalle Cronológico")
+                    # Conteo de faltas FNX
+                    total_fnx = res_al.astype(str).apply(lambda x: x.str.contains('FNX')).sum().sum()
+                    st.metric("Faltas No Justificadas (FNX)", total_fnx)
                     st.dataframe(res_al, use_container_width=True)
                 else:
-                    st.info(f"No hay registros previos para {al_busq}.")
+                    st.info("Sin registros previos.")
         else:
-            st.error("No se pudo cargar el historial. Revisa que el GID sea el de la pestaña de respuestas.")
+            # Este es el mensaje rojo que ves. Significa que URL_HISTORIAL no devuelve datos.
+            st.error("⚠️ Error de Conexión: No se pudo leer la hoja de historial.")
+            st.info("Asegúrate de que el GID_HISTORIAL en el código sea el número correcto de la pestaña de respuestas.")
 
-# Este except debe estar al final del todo, alineado con el try inicial
 except Exception as e:
-    st.error(f"Error general en la aplicación: {e}")
-except Exception as e:
-    st.error(f"Error general: {e}")
+    st.error(f"Error General: {e}")
