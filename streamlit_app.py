@@ -41,13 +41,9 @@ def cargar_datos(url):
 FORM_ASISTENCIA = "https://docs.google.com/forms/d/e/1FAIpQLSef94w2FNw2XTqRo9ZRnhURSOJx-5iUqeeVZ5kqqASLiTYF0A/formResponse"
 
 # --- 3. BARRA LATERAL ---
-# Creamos dos columnas en la barra lateral para reducir la imagen al 50%
-col_img1, col_img2 = st.sidebar.columns([1, 1]) 
-
-with col_img1:
     try:
         # Aquí cargamos tu imagen al 50% de la barra lateral
-        st.image("avatar-sdf.png", use_container_width=True)
+        st.sidebar.image("avatar-sdf.png", width=70)
     except:
         pass
 st.sidebar.title("🎵 SDF Panel")
