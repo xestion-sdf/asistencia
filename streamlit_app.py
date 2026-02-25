@@ -7,7 +7,7 @@ st.set_page_config(page_title="Control Orquesta SDF", layout="wide")
 # URL DIRECTA AL CSV (Sin pasar por conectores)
 # He añadido un parámetro extra para saltar la caché de Google
 URL_LISTADO = "https://docs.google.com/spreadsheets/d/1wR4oDqNV5QheGx7wp-H9-s6De2IMAynSf_9vLGbE5qI/export?format=csv&gid=320023"
-URL_DOCENTES = "https://docs.google.com/spreadsheets/d/1wR4oDqNV5QheGx7wp-H9-s6De2IMAynSf_9vLGbE5qI/export?format=csv&gid=485552718"
+URL_DOCENTES = "https://docs.google.com/spreadsheets/d/1wR4oDqNV5QheGx7wp-H9-s6De2IMAynSf_9vLGbE5qI/export?format=csv&gid=1283708974"
 
 st.title("🎻 Gestión de Orquestas SDF")
 
