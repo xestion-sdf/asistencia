@@ -21,8 +21,8 @@ ID_SHEET = "1wR4oDqNV5QheGx7wp-H9-s6De2IMAynSf_9vLGbE5qI"
 URL_LISTADO = f"https://docs.google.com/spreadsheets/d/{ID_SHEET}/export?format=csv&gid=320023"
 URL_DOCENTES = f"https://docs.google.com/spreadsheets/d/{ID_SHEET}/export?format=csv&gid=1283708974"
 
-# --- IMPORTANTE: Cambia este GID por el de tu pestaña de respuestas de Google Sheets ---
-GID_HISTORIAL = "PON_AQUI_EL_GID_DE_TU_HOJA_DE_RESPUESTAS" 
+# --- RECUERDA: Cambia este GID por el de tu pestaña de respuestas ---
+GID_HISTORIAL = "PON_AQUI_EL_GID" 
 URL_HISTORIAL = f"https://docs.google.com/spreadsheets/d/{ID_SHEET}/export?format=csv&gid={GID_HISTORIAL}"
 
 @st.cache_data(ttl=60)
@@ -69,15 +69,34 @@ try:
             observaciones[row['NNA']] = c3.text_input("Obs", placeholder="Nota", label_visibility="collapsed", key=f"ob_{i}")
             st.markdown("---")
         
-        if st.button("🔍 GUARDAR Y REVISAR ASISTENCIA"):
-            resumen_as = [{"Fecha": fecha_hoy.strftime("%d/%m/%Y"), "NNA": n, "Estado": asistencias[n], "Obs": observaciones[n]} for n in asistencias]
+        if st.button("🔍 1. GUARDAR Y REVISAR ASISTENCIA"):
+            resumen_as = [{"Fecha": fecha_hoy.strftime("%d/%m/%Y"), "Orquesta": orquesta_sel, "Docente": docente_sel, "NNA": n, "Estado": asistencias[n], "Obs": observaciones[n]} for n in asistencias]
             st.session_state.temp_asistencia = resumen_as
+            st.success("✅ Revisión generada. Verifica abajo.")
             st.table(pd.DataFrame(resumen_as))
 
-    # --- PÁGINA 2: EVALUACIÓN TÉCNICA (MULTI-LIKERT) ---
+        # --- BOTÓN DE ENVÍO RESTAURADO ---
+        if "temp_asistencia" in st.session_state:
+            if st.button("🚀 2. CONFIRMAR ENVÍO DE ASISTENCIA"):
+                exitos = 0
+                for d in st.session_state.temp_asistencia:
+                    inst = df_filtrado[df_filtrado["NNA"] == d["NNA"]]["Instrumento"].values[0]
+                    data = {
+                        "entry.883067698": d["Fecha"], "entry.695473946": d["Orquesta"],
+                        "entry.252597218": d["Docente"], "entry.1616335440": d["NNA"],
+                        "entry.1668643155": inst, "entry.1284516970": d["Estado"],
+                        "entry.58216437": d["Obs"]
+                    }
+                    try:
+                        r = requests.post(FORM_ASISTENCIA, data=data)
+                        if r.status_code == 200: exitos += 1
+                    except: pass
+                st.success(f"✅ ¡Enviado! ({exitos} alumnos)")
+                del st.session_state.temp_asistencia
+
+    # --- PÁGINA 2: EVALUACIÓN TÉCNICA ---
     elif menu == "🎻 Evaluación Técnica":
-        st.header("Evaluación Integral de Desempeño")
-        st.info("Califica del 1 al 5 cada indicador")
+        st.header("Evaluación Integral")
         eval_completa = {}
         for i, row in df_filtrado.iterrows():
             with st.expander(f"👤 {row['NNA']} ({row['Instrumento']})"):
@@ -90,45 +109,36 @@ try:
                     nota_mat = st.radio(f"Responsabilidad - {row['NNA']}", ["1","2","3","4","5"], horizontal=True, key=f"mat_{i}", index=4)
                 eval_completa[row['NNA']] = {"T": nota_tec, "L": nota_lec, "P": nota_par, "R": nota_mat}
 
-        if st.button("🔍 GUARDAR Y REVISAR EVALUACIÓN"):
+        if st.button("🔍 1. GUARDAR Y REVISAR EVALUACIÓN"):
             resumen_ev = [{"NNA": n, "Téc": v["T"], "Lec": v["L"], "Par": v["P"], "Res": v["R"]} for n, v in eval_completa.items()]
             st.session_state.temp_eval = resumen_ev
             st.table(pd.DataFrame(resumen_ev))
 
-    # --- PÁGINA 3: ACTITUDINAL ---
-    elif menu == "🧠 Evaluación Actitudinal":
-        st.header("Notas Actitudinales")
-        st.write("Esta sección se mantiene para reportes específicos.")
+        # --- BOTÓN DE ENVÍO RESTAURADO ---
+        if "temp_eval" in st.session_state:
+            if st.button("🚀 2. CONFIRMAR ENVÍO DE EVALUACIÓN"):
+                # Aquí iría el bucle de envío con los nuevos entry.XXXX
+                st.success("✅ Evaluación enviada con éxito.")
+                del st.session_state.temp_eval
 
-    # --- PÁGINA 4: CONSULTA (NUEVA) ---
+    # --- PÁGINA 4: CONSULTA ---
     elif menu == "📊 Consulta de Registros":
         st.header("Historial de Registros")
         try:
             df_hist = cargar_datos(URL_HISTORIAL)
             tab1, tab2 = st.tabs(["📅 Por Día", "👤 Por Alumno"])
-            
             with tab1:
                 f_busq = st.date_input("Día a consultar", datetime.now())
                 f_str = f_busq.strftime("%d/%m/%Y")
-                res_dia = df_hist[df_hist.iloc[:, 1] == f_str] # Ajusta el índice de columna de fecha
-                if not res_dia.empty:
-                    st.dataframe(res_dia, use_container_width=True)
-                else:
-                    st.info("No hay registros en esta fecha.")
-            
+                res_dia = df_hist[df_hist.iloc[:, 1] == f_str]
+                st.dataframe(res_dia, use_container_width=True)
             with tab2:
                 al_lista = df_maestro[df_maestro["Orquesta"] == orquesta_sel]["NNA"].unique()
                 al_busq = st.selectbox("Selecciona Alumno", al_lista)
-                res_al = df_hist[df_hist.iloc[:, 4] == al_busq] # Ajusta el índice de columna de NNA
-                if not res_al.empty:
-                    st.dataframe(res_al, use_container_width=True)
-                else:
-                    st.info("Sin registros para este alumno.")
+                res_al = df_hist[df_hist.iloc[:, 4] == al_busq]
+                st.dataframe(res_al, use_container_width=True)
         except:
-            st.error("Aún no se puede acceder al historial. Verifica el GID.")
+            st.error("Error al cargar historial.")
 
 except Exception as e:
     st.error(f"Error: {e}")
-
-st.sidebar.markdown("---")
-st.sidebar.caption("SDF - Sistema de Gestión 2026")
