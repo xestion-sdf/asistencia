@@ -6,10 +6,10 @@ from datetime import datetime
 # --- CONFIGURACIÓN DE PÁGINA ---
 st.set_page_config(page_title="SDF - Portal Docente", layout="wide")
 
-# --- CSS PARA EL COLOR VERDE SDF ---
+# --- CSS PARA FORZAR VERDE SDF ---
 st.markdown("""
     <style>
-    :root { --primary-color: #28a745; }
+    :root { --primary-color: #28a745 !important; }
     div[data-testid="stRadio"] div[role="radiogroup"] [data-checked="true"] > div:first-child {
         border-color: #28a745 !important;
         background-color: #28a745 !important;
@@ -28,11 +28,18 @@ def cargar_datos(url):
     df.columns = df.columns.str.strip()
     return df
 
+# --- CONFIGURACIÓN DE FORMULARIOS ---
+# Formulario de Asistencia (el que ya tienes vinculado)
+FORM_ASISTENCIA = "https://docs.google.com/forms/d/e/1FAIpQLSef94w2FNw2XTqRo9ZRnhURSOJx-5iUqeeVZ5kqqASLiTYF0A/formResponse"
+# Aquí pondrías las URLs de los otros formularios cuando los crees
+FORM_EVAL_TECNICA = "URL_FORM_TECNICO"
+FORM_EVAL_ACTITUD = "URL_FORM_ACTITUD"
+
 # --- NAVEGACIÓN LATERAL ---
 st.sidebar.title("🎵 SDF Panel")
 menu = st.sidebar.radio(
     "Selecciona una función:",
-    ["📋 Pasar Asistencia", "🎻 Evaluación Técnica", "🧠 Evaluación Actitudinal"]
+    ["📋 Asistencia Diaria", "🎻 Evaluación Técnica", "🧠 Evaluación Actitudinal"]
 )
 
 try:
@@ -52,45 +59,41 @@ try:
         st.info("👈 Por favor, selecciona tu nombre en el menú lateral para comenzar.")
     
     # ---------------------------------------------------------
-    # PÁGINA 1: ASISTENCIA
+    # PÁGINA 1: ASISTENCIA (CON OBSERVACIONES Y VISTA PREVIA)
     # ---------------------------------------------------------
-    elif menu == "📋 Pasar Asistencia":
-        st.header("Control de Asistencia Diaria")
+    elif menu == "📋 Asistencia Diaria":
+        st.header(f"Control de Asistencia - {orquesta_sel}")
         asistencias = {}
+        observaciones = {}
+
         for i, row in df_filtrado.iterrows():
-            col1, col2 = st.columns([3, 2])
-            col1.write(f"**{row['NNA']}**")
-            asistencias[row['NNA']] = col2.radio(f"A_{i}", ["P", "FX", "FNX"], horizontal=True, label_visibility="collapsed", key=f"as_{i}")
-            st.markdown("---")
+            with st.container():
+                col1, col2, col3 = st.columns([3, 2, 4])
+                col1.write(f"**{row['NNA']}**")
+                asistencias[row['NNA']] = col2.radio(f"as_{i}", ["P", "FX", "FNX"], horizontal=True, label_visibility="collapsed", key=f"as_{i}")
+                observaciones[row['NNA']] = col3.text_input("Obs", placeholder="Nota opcional", label_visibility="collapsed", key=f"ob_{i}")
+                st.markdown("---")
         
-        if st.button("💾 Guardar Asistencia"):
-            st.success("Vista previa generada. ¡Listo para enviar!")
-            # Aquí pondrías tu lógica de requests.post para asistencia
+        if st.button("🔍 1. GUARDAR Y REVISAR ASISTENCIA"):
+            fecha_str = fecha_hoy.strftime("%d/%m/%Y")
+            resumen = []
+            for nna in asistencias:
+                resumen.append({
+                    "Fecha": fecha_str, "Orquesta": orquesta_sel, "Docente": docente_sel,
+                    "NNA": nna, "Asistencia": asistencias[nna], "Observaciones": observaciones[nna]
+                })
+            st.session_state.temp_asistencia = resumen
+            st.success("✅ Vista previa generada. Revisa la tabla abajo.")
+            st.table(pd.DataFrame(resumen))
 
-    # ---------------------------------------------------------
-    # PÁGINA 2: EVALUACIÓN TÉCNICA (Likert)
-    # ---------------------------------------------------------
-    elif menu == "🎻 Evaluación Técnica":
-        st.header("Escala Likert: Desempeño Técnico")
-        st.caption("1: Inicial | 5: Avanzado")
-        notas = {}
-        for i, row in df_filtrado.iterrows():
-            col1, col2 = st.columns([3, 3])
-            col1.write(f"**{row['NNA']}**")
-            notas[row['NNA']] = col2.radio(f"T_{i}", ["1", "2", "3", "4", "5"], horizontal=True, label_visibility="collapsed", key=f"te_{i}", index=2)
-            st.markdown("---")
-
-    # ---------------------------------------------------------
-    # PÁGINA 3: EVALUACIÓN ACTITUDINAL
-    # ---------------------------------------------------------
-    elif menu == "🧠 Evaluación Actitudinal":
-        st.header("Escala Likert: Actitud y Compromiso")
-        actitudes = {}
-        for i, row in df_filtrado.iterrows():
-            col1, col2 = st.columns([3, 3])
-            col1.write(f"**{row['NNA']}**")
-            actitudes[row['NNA']] = col2.radio(f"Act_{i}", ["1", "2", "3", "4", "5"], horizontal=True, label_visibility="collapsed", key=f"ac_{i}", index=4)
-            st.markdown("---")
-
-except Exception as e:
-    st.error(f"Error: {e}")
+        if "temp_asistencia" in st.session_state:
+            if st.button("🚀 2. CONFIRMAR ENVÍO DE ASISTENCIA"):
+                exitos = 0
+                with st.spinner("Enviando..."):
+                    for d in st.session_state.temp_asistencia:
+                        inst = df_filtrado[df_filtrado["NNA"] == d["NNA"]]["Instrumento"].values[0]
+                        data = {
+                            "entry.883067698": d["Fecha"], "entry.695473946": d["Orquesta"],
+                            "entry.252597218": d["Docente"], "entry.1616335440": d["NNA"],
+                            "entry.1668643155": inst, "entry.1284516970": d["Asistencia"],
+                            "entry.5821
