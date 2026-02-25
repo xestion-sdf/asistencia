@@ -109,13 +109,7 @@ try:
                 st.success(f"✅ ¡Enviado! ({exitos} alumnos)")
                 del st.session_state.temp_asistencia
 
-    # ---------------------------------------------------------
-    # PÁGINA 2 Y 3: Mismo esquema para Evaluación (Estructura base)
-    # ---------------------------------------------------------
-    elif menu == "🎻 Evaluación Técnica":
-        st.header("Evaluación Técnica (Escala 1-5)")
-        # Lógica similar para Técnica...
-        st.info("Pestaña en desarrollo: Configura el nuevo formulario para activar el envío.")
+
 
 # --- DENTRO DE LA PESTAÑA DE EVALUACIÓN ---
 elif menu == "🎻 Evaluación Técnica":
