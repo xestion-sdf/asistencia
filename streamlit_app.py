@@ -110,51 +110,84 @@ try:
                 del st.session_state.temp_asistencia
 
 
+# ---------------------------------------------------------
+    # PÁGINA 2: EVALUACIÓN INTEGRAL
+    # ---------------------------------------------------------
+    elif menu == "🎻 Evaluación Técnica":
+        st.header("Evaluación Integral de Desempeño")
+        st.info("Despliega cada alumno para calificar los 4 indicadores (1: Inicial - 5: Excelente)")
+        
+        eval_completa = {}
 
-# --- DENTRO DE LA PESTAÑA DE EVALUACIÓN ---
-elif menu == "🎻 Evaluación Técnica":
-    st.header("Evaluación Integral de Desempeño")
-    st.info("Despliega cada alumno para calificar los 4 indicadores (1: Inicial - 5: Excelente)")
-    
-    # Diccionarios para guardar las 4 notas por alumno
-    eval_completa = {}
+        for i, row in df_filtrado.iterrows():
+            # El expander permite que la lista no sea kilométrica
+            with st.expander(f"👤 {row['NNA']} ({row['Instrumento']})"):
+                c1, c2 = st.columns(2)
+                
+                with c1:
+                    nota_tec = st.radio(f"Técnica - {row['NNA']}", ["1", "2", "3", "4", "5"], 
+                                        horizontal=True, key=f"tec_{i}", index=2)
+                    nota_lec = st.radio(f"Lectura - {row['NNA']}", ["1", "2", "3", "4", "5"], 
+                                        horizontal=True, key=f"lec_{i}", index=2)
+                
+                with c2:
+                    nota_par = st.radio(f"Participación - {row['NNA']}", ["1", "2", "3", "4", "5"], 
+                                        horizontal=True, key=f"par_{i}", index=4)
+                    nota_mat = st.radio(f"Responsabilidad - {row['NNA']}", ["1", "2", "3", "4", "5"], 
+                                        horizontal=True, key=f"mat_{i}", index=4)
+                
+                eval_completa[row['NNA']] = {
+                    "Tecnica": nota_tec,
+                    "Lectura": nota_lec,
+                    "Participacion": nota_par,
+                    "Responsabilidad": nota_mat,
+                    "Instrumento": row['Instrumento']
+                }
 
-    for i, row in df_filtrado.iterrows():
-        # Usamos un expansor para que la lista sea scannable
-        with st.expander(f"👤 {row['NNA']} ({row['Instrumento']})"):
-            c1, c2 = st.columns(2)
-            
-            with c1:
-                nota_tec = st.radio(f"Técnica - {row['NNA']}", ["1", "2", "3", "4", "5"], 
-                                    horizontal=True, key=f"tec_{i}", index=2)
-                nota_lec = st.radio(f"Lectura - {row['NNA']}", ["1", "2", "3", "4", "5"], 
-                                    horizontal=True, key=f"lec_{i}", index=2)
-            
-            with c2:
-                nota_par = st.radio(f"Participación - {row['NNA']}", ["1", "2", "3", "4", "5"], 
-                                    horizontal=True, key=f"par_{i}", index=4)
-                nota_mat = st.radio(f"Responsabilidad - {row['NNA']}", ["1", "2", "3", "4", "5"], 
-                                    horizontal=True, key=f"mat_{i}", index=4)
-            
-            eval_completa[row['NNA']] = {
-                "Tecnica": nota_tec,
-                "Lectura": nota_lec,
-                "Participacion": nota_par,
-                "Responsabilidad": nota_mat
-            }
+        # BOTÓN 1: GUARDAR Y MOSTRAR TABLA
+        if st.button("🔍 1. GUARDAR Y REVISAR EVALUACIÓN"):
+            fecha_str = fecha_hoy.strftime("%d/%m/%Y")
+            resumen_eval = []
+            for nna, v in eval_completa.items():
+                resumen_eval.append({
+                    "Fecha": fecha_str,
+                    "Orquesta": orquesta_sel,
+                    "Docente": docente_sel,
+                    "NNA": nna,
+                    "Instrumento": v["Instrumento"],
+                    "Téc": v["Tecnica"],
+                    "Lec": v["Lectura"],
+                    "Par": v["Participacion"],
+                    "Res": v["Responsabilidad"]
+                })
+            st.session_state.temp_eval = resumen_eval
+            st.success("✅ Revisión lista. Ver tabla abajo.")
+            st.table(pd.DataFrame(resumen_eval))
 
-    if st.button("🔍 GUARDAR EVALUACIÓN COMPLETA"):
-        resumen_eval = []
-        for nna, valores in eval_completa.items():
-            resumen_eval.append({
-                "NNA": nna,
-                "Téc": valores["Tecnica"],
-                "Lec": valores["Lectura"],
-                "Par": valores["Participacion"],
-                "Res": valores["Responsabilidad"]
-            })
-        st.session_state.temp_eval = resumen_eval
-        st.table(pd.DataFrame(resumen_eval))
-
-except Exception as e:
-    st.error(f"Error: {e}")
+        # BOTÓN 2: ENVÍO DEFINITIVO (Solo si hay datos guardados)
+        if "temp_eval" in st.session_state:
+            st.warning("⚠️ ¿Todo correcto? Pulsa el botón para enviar al historial.")
+            if st.button("🚀 2. CONFIRMAR ENVÍO DE EVALUACIÓN"):
+                exitos = 0
+                with st.spinner("Enviando..."):
+                    for d in st.session_state.temp_eval:
+                        # RECUERDA CAMBIAR ESTOS IDS POR LOS DE TU NUEVO FORMULARIO
+                        form_data = {
+                            "entry.883067698": d["Fecha"],
+                            "entry.695473946": d["Orquesta"],
+                            "entry.252597218": d["Docente"],
+                            "entry.1616335440": d["NNA"],
+                            "entry.1668643155": d["Instrumento"],
+                            "entry.111111111": d["Téc"], # Reemplazar ID
+                            "entry.222222222": d["Lec"], # Reemplazar ID
+                            "entry.333333333": d["Par"], # Reemplazar ID
+                            "entry.444444444": d["Res"]  # Reemplazar ID
+                        }
+                        try:
+                            # Aquí usas la URL del formulario de evaluación
+                            requests.post(FORM_URL_EVAL, data=form_data)
+                            exitos += 1
+                        except:
+                            pass
+                st.success(f"✅ ¡Evaluación enviada! ({exitos} registros)")
+                del st.session_state.temp_eval
