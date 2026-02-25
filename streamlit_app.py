@@ -43,7 +43,7 @@ FORM_ASISTENCIA = "https://docs.google.com/forms/d/e/1FAIpQLSef94w2FNw2XTqRo9ZRn
 # --- 3. BARRA LATERAL ---
 # 1. Mostrar la imagen (Logo)
 try:
-    st.sidebar.image("avatar-sdf.png", use_container_width=True)
+    st.sidebar.image("avatar-sdf-100px.png", use_container_width=True)
 except:
     # Si la imagen no se encuentra, no mostramos error, solo el título
     pass
