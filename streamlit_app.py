@@ -1,4 +1,4 @@
-# --- PÁGINA 3: CONSULTA DE REGISTROS CON CONTADOR DE FALTAS ---
+# --- PÁGINA 3: CONSULTA DE REGISTROS CON SEMÁFORO DE FALTAS ---
     elif menu == "📊 Consulta de Registros":
         st.header("Historial y Seguimiento")
         df_hist = cargar_datos(URL_HISTORIAL)
@@ -12,11 +12,12 @@
                 f_str_2 = f_busq.strftime("%d/%m/%Y")
                 
                 # Filtro por fecha en Marca Temporal
-                res_dia = df_hist[df_hist.iloc[:, 0].astype(str).str.contains(f_str_1, na=False) | 
-                                 df_hist.iloc[:, 0].astype(str).str.contains(f_str_2, na=False)]
+                mask_dia = df_hist.iloc[:, 0].astype(str).str.contains(f_str_1, na=False) | \
+                           df_hist.iloc[:, 0].astype(str).str.contains(f_str_2, na=False)
+                res_dia = df_hist[mask_dia]
                 
                 if not res_dia.empty:
-                    st.write(f"### Registros del {f_str_2}")
+                    st.write(f"### Registros del {f_busq.strftime('%d/%m/%Y')}")
                     st.dataframe(res_dia, use_container_width=True)
                 else:
                     st.info("No hay registros para esta fecha.")
@@ -25,31 +26,38 @@
                 al_lista = df_maestro[df_maestro["Orquesta"] == orquesta_sel]["NNA"].unique()
                 al_busq = st.selectbox("Selecciona un alumno", al_lista)
                 
-                # Filtramos registros del alumno
+                # Filtramos registros del alumno buscando su nombre en cualquier columna
                 res_al = df_hist[df_hist.apply(lambda row: row.astype(str).str.contains(al_busq).any(), axis=1)].copy()
                 
                 if not res_al.empty:
-                    # --- CÁLCULO DE FALTAS ---
-                    # Buscamos en todas las columnas el texto 'FNX'
-                    total_fnx = res_al.apply(lambda row: row.astype(str).str.contains('FNX').any(), axis=1).sum()
-                    total_fx = res_al.apply(lambda row: row.astype(str).str.contains('FX').any(), axis=1).sum()
-                    total_p = res_al.apply(lambda row: row.astype(str).str.contains('P', case=False).any(), axis=1).sum()
+                    # --- CONTEO DE ASISTENCIAS ---
+                    # Convertimos todo a texto para buscar los estados
+                    texto_total = res_al.astype(str).values.flatten()
+                    
+                    total_p = sum("P" == x for x in texto_total)
+                    total_fx = sum("FX" == x for x in texto_total)
+                    total_fnx = sum("FNX" == x for x in texto_total)
 
-                    # Mostrar alertas visuales
-                    c1, c2, c3 = st.columns(3)
-                    c1.metric("Asistencias (P)", total_p)
-                    c2.metric("Faltas Justificadas (FX)", total_fx)
-                    # La métrica de faltas no justificadas resalta en rojo si es mayor a 0
-                    c3.metric("FALTAS NO JUSTIFICADAS (FNX)", total_fnx, delta_color="inverse")
+                    # Mostrar métricas visuales
+                    m1, m2, m3 = st.columns(3)
+                    m1.metric("Presentes (P)", total_p)
+                    m2.metric("Justificadas (FX)", total_fx)
+                    m3.metric("FALTAS SIN JUSTIFICAR (FNX)", total_fnx, delta_color="inverse")
 
+                    # ALERTAS CRÍTICAS
                     if total_fnx >= 3:
-                        st.error(f"⚠️ ATENCIÓN: {al_busq} tiene {total_fnx} faltas no justificadas. Se recomienda contactar al apoderado.")
+                        st.error(f"🚨 ALERTA CRÍTICA: {al_busq} tiene {total_fnx} faltas no justificadas.")
+                        st.button("📧 Notificar a Coordinación")
                     elif total_fnx > 0:
-                        st.warning(f"Nota: El alumno registra {total_fnx} faltas no justificadas.")
+                        st.warning(f"⚠️ El alumno registra {total_fnx} inasistencias sin justificación.")
 
-                    st.write("### Detalle Histórico")
+                    st.write("### Detalle Cronológico")
                     st.dataframe(res_al, use_container_width=True)
                 else:
                     st.info(f"No hay registros previos para {al_busq}.")
         else:
-            st.error("No se pudo cargar el historial. Revisa el GID de la pestaña de respuestas.")
+            st.error("No se pudo cargar el historial. Revisa que el GID sea el de la pestaña de respuestas.")
+
+# Este except debe estar al final del todo, alineado con el try inicial
+except Exception as e:
+    st.error(f"Error general en la aplicación: {e}")
