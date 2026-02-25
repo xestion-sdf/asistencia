@@ -3,10 +3,9 @@ import pandas as pd
 import requests
 from datetime import datetime
 
-# --- CONFIGURACIÓN DE PÁGINA ---
+# --- 1. CONFIGURACIÓN E INTERFAZ ---
 st.set_page_config(page_title="SDF - Portal Docente", layout="wide")
 
-# --- CSS PARA FORZAR VERDE SDF ---
 st.markdown("""
     <style>
     :root { --primary-color: #28a745 !important; }
@@ -17,7 +16,7 @@ st.markdown("""
     </style>
     """, unsafe_allow_html=True)
 
-# --- CARGA DE DATOS (LECTURA) ---
+# --- 2. CARGA DE DATOS ---
 ID_SHEET = "1wR4oDqNV5QheGx7wp-H9-s6De2IMAynSf_9vLGbE5qI"
 URL_LISTADO = f"https://docs.google.com/spreadsheets/d/{ID_SHEET}/export?format=csv&gid=320023"
 URL_DOCENTES = f"https://docs.google.com/spreadsheets/d/{ID_SHEET}/export?format=csv&gid=1283708974"
@@ -28,10 +27,11 @@ def cargar_datos(url):
     df.columns = df.columns.str.strip()
     return df
 
-# --- CONFIGURACIÓN DE FORMULARIO ASISTENCIA ---
+# URLs de Google Forms (Actualiza estas con tus nuevos formularios cuando los tengas)
 FORM_ASISTENCIA = "https://docs.google.com/forms/d/e/1FAIpQLSef94w2FNw2XTqRo9ZRnhURSOJx-5iUqeeVZ5kqqASLiTYF0A/formResponse"
+FORM_EVAL_INTEGRAL = "TU_NUEVA_URL_AQUI" 
 
-# --- NAVEGACIÓN LATERAL ---
+# --- 3. BARRA LATERAL (NAVEGACIÓN) ---
 st.sidebar.title("🎵 SDF Panel")
 menu = st.sidebar.radio(
     "Selecciona una función:",
@@ -54,117 +54,53 @@ try:
     if docente_sel == "Selecciona...":
         st.info("👈 Por favor, selecciona tu nombre en el menú lateral para comenzar.")
     
-    # ---------------------------------------------------------
-    # PÁGINA 1: ASISTENCIA
-    # ---------------------------------------------------------
+    # --- PÁGINA 1: ASISTENCIA ---
     elif menu == "📋 Asistencia Diaria":
-        st.header(f"Control de Asistencia - {orquesta_sel}")
+        st.header(f"Asistencia - {orquesta_sel}")
         asistencias = {}
         observaciones = {}
-
         for i, row in df_filtrado.iterrows():
-            with st.container():
-                col1, col2, col3 = st.columns([3, 2, 4])
-                col1.write(f"**{row['NNA']}**")
-                asistencias[row['NNA']] = col2.radio(f"as_{i}", ["P", "FX", "FNX"], horizontal=True, label_visibility="collapsed", key=f"as_{i}")
-                observaciones[row['NNA']] = col3.text_input("Obs", placeholder="Nota opcional", label_visibility="collapsed", key=f"ob_{i}")
-                st.markdown("---")
+            c1, c2, c3 = st.columns([3, 2, 4])
+            c1.write(f"**{row['NNA']}**")
+            asistencias[row['NNA']] = c2.radio(f"as_{i}", ["P", "FX", "FNX"], horizontal=True, label_visibility="collapsed", key=f"as_{i}")
+            observaciones[row['NNA']] = c3.text_input("Obs", placeholder="Nota", label_visibility="collapsed", key=f"ob_{i}")
+            st.markdown("---")
         
-        if st.button("🔍 1. GUARDAR Y REVISAR ASISTENCIA"):
-            fecha_str = fecha_hoy.strftime("%d/%m/%Y")
-            resumen = []
-            for nna in asistencias:
-                resumen.append({
-                    "Fecha": fecha_str, 
-                    "Orquesta": orquesta_sel, 
-                    "Docente": docente_sel,
-                    "NNA": nna, 
-                    "Asistencia": asistencias[nna], 
-                    "Observaciones": observaciones[nna]
-                })
-            st.session_state.temp_asistencia = resumen
-            st.success("✅ Vista previa generada. Revisa la tabla abajo.")
-            st.table(pd.DataFrame(resumen))
+        if st.button("🔍 GUARDAR Y REVISAR ASISTENCIA"):
+            resumen_as = [{"Fecha": fecha_hoy.strftime("%d/%m/%Y"), "NNA": n, "Estado": asistencias[n], "Obs": observaciones[n]} for n in asistencias]
+            st.session_state.temp_asistencia = resumen_as
+            st.table(pd.DataFrame(resumen_as))
 
-        if "temp_asistencia" in st.session_state:
-            if st.button("🚀 2. CONFIRMAR ENVÍO DE ASISTENCIA"):
-                exitos = 0
-                with st.spinner("Enviando..."):
-                    for d in st.session_state.temp_asistencia:
-                        inst = df_filtrado[df_filtrado["NNA"] == d["NNA"]]["Instrumento"].values[0]
-                        # Mapeo corregido sin saltos de línea peligrosos
-                        data = {
-                            "entry.883067698": d["Fecha"],
-                            "entry.695473946": d["Orquesta"],
-                            "entry.252597218": d["Docente"],
-                            "entry.1616335440": d["NNA"],
-                            "entry.1668643155": inst,
-                            "entry.1284516970": d["Asistencia"],
-                            "entry.58216437": d["Observaciones"]
-                        }
-                        try:
-                            r = requests.post(FORM_ASISTENCIA, data=data)
-                            if r.status_code == 200: exitos += 1
-                        except: pass
-                st.success(f"✅ ¡Enviado! ({exitos} alumnos)")
-                del st.session_state.temp_asistencia
-
-# --- DENTRO DE LA PESTAÑA DE EVALUACIÓN ---
-elif menu == "🎻 Evaluación Técnica":
-    st.header("Evaluación Integral de Desempeño")
-    st.info("Despliega cada alumno para calificar los 4 indicadores (1: Inicial - 5: Excelente)")
-    
-    # Diccionarios para guardar las 4 notas por alumno
-    eval_completa = {}
-
-    for i, row in df_filtrado.iterrows():
-        # Usamos un expansor para que la lista sea scannable
-        with st.expander(f"👤 {row['NNA']} ({row['Instrumento']})"):
-            c1, c2 = st.columns(2)
-            
-            with c1:
-                nota_tec = st.radio(f"Técnica - {row['NNA']}", ["1", "2", "3", "4", "5"], 
-                                    horizontal=True, key=f"tec_{i}", index=2)
-                nota_lec = st.radio(f"Lectura - {row['NNA']}", ["1", "2", "3", "4", "5"], 
-                                    horizontal=True, key=f"lec_{i}", index=2)
-            
-            with c2:
-                nota_par = st.radio(f"Participación - {row['NNA']}", ["1", "2", "3", "4", "5"], 
-                                    horizontal=True, key=f"par_{i}", index=4)
-                nota_mat = st.radio(f"Responsabilidad - {row['NNA']}", ["1", "2", "3", "4", "5"], 
-                                    horizontal=True, key=f"mat_{i}", index=4)
-            
-            eval_completa[row['NNA']] = {
-                "Tecnica": nota_tec,
-                "Lectura": nota_lec,
-                "Participacion": nota_par,
-                "Responsabilidad": nota_mat
-            }
-
-    if st.button("🔍 GUARDAR EVALUACIÓN COMPLETA"):
-        resumen_eval = []
-        for nna, valores in eval_completa.items():
-            resumen_eval.append({
-                "NNA": nna,
-                "Téc": valores["Tecnica"],
-                "Lec": valores["Lectura"],
-                "Par": valores["Participacion"],
-                "Res": valores["Responsabilidad"]
-            })
-        st.session_state.temp_eval = resumen_eval
-        st.table(pd.DataFrame(resumen_eval))
-# ---------------------------------------------------------
-    # PÁGINA 2 Y 3: Mismo esquema para Evaluación (Estructura base)
-    # ---------------------------------------------------------
+    # --- PÁGINA 2: EVALUACIÓN TÉCNICA (MULTI-LIKERT) ---
     elif menu == "🎻 Evaluación Técnica":
-        st.header("Evaluación Técnica (Escala 1-5)")
-        # Lógica similar para Técnica...
-        st.info("Pestaña en desarrollo: Configura el nuevo formulario para activar el envío.")
+        st.header("Evaluación Integral de Desempeño")
+        st.info("Califica del 1 al 5 cada indicador")
+        eval_completa = {}
+        for i, row in df_filtrado.iterrows():
+            with st.expander(f"👤 {row['NNA']} ({row['Instrumento']})"):
+                c1, c2 = st.columns(2)
+                with c1:
+                    nota_tec = st.radio(f"Técnica - {row['NNA']}", ["1","2","3","4","5"], horizontal=True, key=f"tec_{i}", index=2)
+                    nota_lec = st.radio(f"Lectura - {row['NNA']}", ["1","2","3","4","5"], horizontal=True, key=f"lec_{i}", index=2)
+                with c2:
+                    nota_par = st.radio(f"Participación - {row['NNA']}", ["1","2","3","4","5"], horizontal=True, key=f"par_{i}", index=4)
+                    nota_mat = st.radio(f"Responsabilidad - {row['NNA']}", ["1","2","3","4","5"], horizontal=True, key=f"mat_{i}", index=4)
+                eval_completa[row['NNA']] = {"T": nota_tec, "L": nota_lec, "P": nota_par, "R": nota_mat}
 
+        if st.button("🔍 GUARDAR Y REVISAR EVALUACIÓN"):
+            resumen_ev = [{"NNA": n, "Téc": v["T"], "Lec": v["L"], "Par": v["P"], "Res": v["R"]} for n, v in eval_completa.items()]
+            st.session_state.temp_eval = resumen_ev
+            st.table(pd.DataFrame(resumen_ev))
+
+    # --- PÁGINA 3: ACTITUDINAL (PROVISIONAL) ---
     elif menu == "🧠 Evaluación Actitudinal":
-        st.header("Evaluación Actitudinal (Escala 1-5)")
-        # Lógica similar para Actitud...
-        st.info("Pestaña en desarrollo: Configura el nuevo formulario para activar el envío.")
+        st.header("Notas Actitudinales")
+        st.write("Esta sección se puede usar para reportes de conducta específicos.")
 
+# --- CIERRE DEL BLOQUE PRINCIPAL ---
 except Exception as e:
-    st.error(f"Error: {e}")
+    st.error(f"Hubo un error al cargar los datos: {e}")
+
+# --- PIE DE PÁGINA ---
+st.sidebar.markdown("---")
+st.sidebar.caption("SDF - Sistema de Gestión 2026")
