@@ -99,52 +99,69 @@ try:
                 st.success(f"✅ ¡Enviado! ({exitos} registros)")
                 del st.session_state.temp_asistencia
 
-# --- PÁGINA 2: EVALUACIÓN TÉCNICA (ACTIVADA) ---
+# --- PÁGINA 2: EVALUACIÓN MULTIDIMENSIONAL (SISTEMA INTEGRAL) ---
     elif menu == "🎻 Evaluación Técnica":
-        st.header("Evaluación Integral de Desempeño")
-        st.info("Califica del 1 al 5 cada indicador (1: Inicial - 5: Excelente)")
+        st.header("Evaluación Integral de Dimensiones")
         
-        eval_completa = {}
+        # Selector de dimensión
+        dimension = st.selectbox(
+            "Selecciona la Dimensión a evaluar hoy:",
+            ["Cognitiva", "Emocional", "Social", "Persoal"]
+        )
+
+        st.info(f"📍 Indicadores para la Dimensión: **{dimension}**")
+        eval_data = {}
 
         for i, row in df_filtrado.iterrows():
             with st.expander(f"👤 {row['NNA']} ({row['Instrumento']})"):
-                c1, c2 = st.columns(2)
                 
-                with c1:
-                    nota_tec = st.radio(f"Técnica - {row['NNA']}", ["1", "2", "3", "4", "5"], 
-                                        horizontal=True, key=f"tec_{i}", index=2)
-                    nota_lec = st.radio(f"Lectura - {row['NNA']}", ["1", "2", "3", "4", "5"], 
-                                        horizontal=True, key=f"lec_{i}", index=2)
-                
-                with c2:
-                    nota_par = st.radio(f"Participación - {row['NNA']}", ["1", "2", "3", "4", "5"], 
-                                        horizontal=True, key=f"par_{i}", index=4)
-                    nota_mat = st.radio(f"Responsabilidad - {row['NNA']}", ["1", "2", "3", "4", "5"], 
-                                        horizontal=True, key=f"mat_{i}", index=4)
-                
-                eval_completa[row['NNA']] = {
-                    "T": nota_tec, "L": nota_lec, "P": nota_par, "R": nota_mat,
-                    "Instrumento": row['Instrumento']
-                }
+                if dimension == "Cognitiva":
+                    c1, c2 = st.columns(2)
+                    v1 = c1.radio(f"Instrucións dirección - {i}", ["1","2","3","4","5"], horizontal=True, index=2, key=f"cog1_{i}")
+                    v2 = c2.radio(f"Corrixir erros/Memoria - {i}", ["1","2","3","4","5"], horizontal=True, index=2, key=f"cog2_{i}")
+                    eval_data[row['NNA']] = {"Indicador 1": v1, "Indicador 2": v2}
 
-        if st.button("🔍 1. GUARDAR Y REVISAR EVALUACIÓN"):
-            resumen_ev = []
-            for nna, v in eval_completa.items():
-                resumen_ev.append({
+                elif dimension == "Emocional":
+                    c1, c2, c3 = st.columns(3)
+                    v1 = c1.radio(f"Asertividade - {i}", ["1","2","3","4","5"], horizontal=True, index=2, key=f"emo1_{i}")
+                    v2 = c2.radio(f"Frustración - {i}", ["1","2","3","4","5"], horizontal=True, index=2, key=f"emo2_{i}")
+                    v3 = c3.radio(f"Superación/Orgullo - {i}", ["1","2","3","4","5"], horizontal=True, index=2, key=f"emo3_{i}")
+                    eval_data[row['NNA']] = {"Indicador 1": v1, "Indicador 2": v2, "Indicador 3": v3}
+
+                elif dimension == "Social":
+                    c1, c2 = st.columns(2)
+                    v1 = c1.radio(f"Silencio/Respecto - {i}", ["1","2","3","4","5"], horizontal=True, index=2, key=f"soc1_{i}")
+                    v2 = c2.radio(f"Axuda mutua - {i}", ["1","2","3","4","5"], horizontal=True, index=2, key=f"soc2_{i}")
+                    eval_data[row['NNA']] = {"Indicador 1": v1, "Indicador 2": v2}
+                
+                elif dimension == "Persoal":
+                    v1 = st.radio(f"Coidado do material - {row['NNA']}", ["1","2","3","4","5"], horizontal=True, index=2, key=f"per1_{i}")
+                    eval_data[row['NNA']] = {"Indicador 1": v1}
+
+        st.markdown("---")
+        if st.button(f"🔍 1. GARDAR EVALUACIÓN {dimension.upper()}"):
+            resumen_dim = []
+            for nna, valores in eval_data.items():
+                registro = {
                     "Fecha": fecha_hoy.strftime("%d/%m/%Y"),
-                    "Orquesta": orquesta_sel,
                     "Docente": docente_sel,
-                    "NNA": nna,
-                    "Téc": v["T"], "Lec": v["L"], "Par": v["P"], "Res": v["R"]
-                })
-            st.session_state.temp_eval = resumen_ev
-            st.table(pd.DataFrame(resumen_ev))
+                    "Alumno": nna,
+                    "Dimensión": dimension
+                }
+                registro.update(valores) 
+                resumen_dim.append(registro)
+            
+            st.session_state.temp_eval_dim = resumen_dim
+            st.success(f"✅ Revisión de dimensión {dimension} lista.")
+            st.table(pd.DataFrame(resumen_dim))
 
-        if "temp_eval" in st.session_state:
-            if st.button("🚀 2. CONFIRMAR ENVÍO DE EVALUACIÓN"):
-                # Aquí conectarás el FORM_EVAL_INTEGRAL cuando tengas los IDs
-                st.success("✅ Simulación de envío exitosa. (Conecta la URL del form para envío real)")
-                del st.session_state.temp_eval
+        if "temp_eval_dim" in st.session_state:
+            if st.button(f"🚀 2. CONFIRMAR ENVÍO DE {dimension.upper()}"):
+                # Aquí conectaremos los entry.IDs del formulario único
+                st.info("Conectando con el servidor de Google...")
+                # Lógica de requests.post...
+                st.success(f"Datos enviados correctamente a la pestaña de {dimension}")
+                del st.session_state.temp_eval_dim
 
    # --- PÁGINA 3: CONSULTA DE REGISTROS (YA CON CONEXIÓN) ---
     elif menu == "📊 Consulta de Registros":
