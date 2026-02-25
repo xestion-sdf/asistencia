@@ -157,16 +157,28 @@ try:
             
             with tab1:
                 f_busq = st.date_input("Consultar fecha:", datetime.now())
-                f_str = f_busq.strftime("%-d/%-m/%Y") # Formato estándar de Google
                 
-                # Filtrar por la primera columna (Marca Temporal)
-                res_dia = df_hist[df_hist.iloc[:, 0].astype(str).str.contains(f_str, na=False)]
+                # Generamos varios formatos posibles para asegurar la coincidencia
+                f_opcion1 = f_busq.strftime("%d/%m/%Y")   # 25/02/2026
+                f_opcion2 = f_busq.strftime("%-d/%-m/%Y") # 25/2/2026 (sin ceros)
+                f_opcion3 = f_busq.strftime("%Y-%m-%d")   # 2026-02-25
+                
+                # Filtramos: buscamos cualquiera de los 3 formatos en la columna 'Marca temporal' (columna 0)
+                mask_dia = df_hist.iloc[:, 0].astype(str).str.contains(f_opcion1, na=False) | \
+                           df_hist.iloc[:, 0].astype(str).str.contains(f_opcion2, na=False) | \
+                           df_hist.iloc[:, 0].astype(str).str.contains(f_opcion3, na=False)
+                
+                res_dia = df_hist[mask_dia]
                 
                 if not res_dia.empty:
-                    st.success(f"Se encontraron {len(res_dia)} registros para el día seleccionado.")
+                    st.success(f"✅ Se encontraron {len(res_dia)} registros para el día {f_opcion1}")
                     st.dataframe(res_dia, use_container_width=True)
                 else:
-                    st.info("No hay registros guardados para esta fecha.")
+                    st.info(f"No se encontraron registros para el {f_opcion1}.")
+                    # Tip de ayuda para depurar:
+                    with st.expander("¿Por qué no veo resultados?"):
+                        st.write("Formatos intentados:", [f_opcion1, f_opcion2, f_opcion3])
+                        st.write("Primeros registros en el historial:", df_hist.iloc[:2, 0].tolist())
 
             with tab2:
                 al_lista = df_maestro[df_maestro["Orquesta"] == orquesta_sel]["NNA"].unique()
