@@ -5,15 +5,25 @@ from datetime import datetime
 
 st.set_page_config(page_title="SDF - Control de Asistencia", layout="wide")
 
-# --- CSS PARA EL COLOR VERDE SDF ---
+# --- CSS MEJORADO PARA FORZAR EL VERDE SDF ---
 st.markdown("""
     <style>
+    /* 1. Cambia el color del círculo cuando está seleccionado */
     div[data-testid="stRadio"] div[role="radiogroup"] [data-checked="true"] > div:first-child {
-        border-color: #28a745 !important;
-        background-color: #28a745 !important;
+        border-color: rgb(40, 167, 69) !important;
+        background-color: rgb(40, 167, 69) !important;
     }
+    /* 2. Cambia el puntito blanco interno para que se vea bien */
     div[data-testid="stRadio"] div[role="radiogroup"] [data-checked="true"] > div:first-child > div {
         background-color: white !important;
+    }
+    /* 3. Cambia el color cuando pasas el ratón por encima (hover) */
+    div[data-testid="stRadio"] div[role="radiogroup"] label:hover div:first-child {
+        border-color: rgb(40, 167, 69) !important;
+    }
+    /* 4. Forzar color primario de la app a verde para otros elementos */
+    :root {
+        --primary-color: #28a745;
     }
     </style>
     """, unsafe_allow_html=True)
@@ -89,14 +99,13 @@ try:
                     "Obs": observaciones[nna]
                 })
             
-            # Guardamos en la memoria de la sesión (session_state)
             st.session_state.datos_a_enviar = resumen_lista
             st.success("✅ Datos guardados temporalmente. Revísalos abajo.")
             st.table(pd.DataFrame(resumen_lista))
 
-        # --- PASO 2: ENVIAR DEFINITIVO (Solo aparece si ya se guardó) ---
+        # --- PASO 2: ENVIAR DEFINITIVO ---
         if "datos_a_enviar" in st.session_state:
-            st.warning("⚠️ Revisa la tabla superior. Si es correcta, pulsa el botón de enviar.")
+            st.warning("⚠️ Revisa la tabla superior. Si es correcta, pulsa el botón de abajo.")
             if st.button("🚀 2. CONFIRMAR Y ENVIAR AL HISTORIAL"):
                 exitos = 0
                 total = len(st.session_state.datos_a_enviar)
@@ -122,10 +131,9 @@ try:
                 if exitos == total:
                     st.success(f"✅ ¡Éxito! Se enviaron los {exitos} registros.")
                     st.balloons()
-                    # Borramos de la memoria para que no se envíe dos veces por error
                     del st.session_state.datos_a_enviar
                 else:
-                    st.error(f"Error: Solo se enviaron {exitos} de {total}. Revisa la conexión.")
+                    st.error(f"Error: Solo se enviaron {exitos} de {total}.")
 
 except Exception as e:
     st.error(f"Error: {e}")
