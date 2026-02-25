@@ -17,6 +17,7 @@ st.markdown("""
     """, unsafe_allow_html=True)
 
 # --- 2. CARGA DE DATOS ---
+GID_HISTORIAL = "827716903"
 ID_SHEET = "1wR4oDqNV5QheGx7wp-H9-s6De2IMAynSf_9vLGbE5qI"
 URL_LISTADO = f"https://docs.google.com/spreadsheets/d/{ID_SHEET}/export?format=csv&gid=320023"
 URL_DOCENTES = f"https://docs.google.com/spreadsheets/d/{ID_SHEET}/export?format=csv&gid=1283708974"
