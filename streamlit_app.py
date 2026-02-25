@@ -3,32 +3,42 @@ import pandas as pd
 import requests
 from datetime import datetime
 
+# 1. ESTO DEBE IR PRIMERO: Forzamos el color primario desde la configuración
 st.set_page_config(page_title="SDF - Control de Asistencia", layout="wide")
 
-# --- CSS MEJORADO PARA FORZAR EL VERDE SDF ---
+# --- CSS DEFINITIVO PARA ELIMINAR EL ROJO ---
 st.markdown("""
     <style>
-    /* 1. Cambia el color del círculo cuando está seleccionado */
-    div[data-testid="stRadio"] div[role="radiogroup"] [data-checked="true"] > div:first-child {
-        border-color: rgb(40, 167, 69) !important;
-        background-color: rgb(40, 167, 69) !important;
+    /* Forzamos que el color primario de toda la app sea Verde */
+    :root {
+        --primary-color: #28a745 !important;
     }
-    /* 2. Cambia el puntito blanco interno para que se vea bien */
+    
+    /* Cambiamos el color de los Radio Buttons (el círculo y el borde) */
+    div[data-testid="stRadio"] div[role="radiogroup"] [data-checked="true"] > div:first-child {
+        border-color: #28a745 !important;
+        background-color: #28a745 !important;
+    }
+    
+    /* El puntito blanco de adentro */
     div[data-testid="stRadio"] div[role="radiogroup"] [data-checked="true"] > div:first-child > div {
         background-color: white !important;
     }
-    /* 3. Cambia el color cuando pasas el ratón por encima (hover) */
-    div[data-testid="stRadio"] div[role="radiogroup"] label:hover div:first-child {
-        border-color: rgb(40, 167, 69) !important;
+
+    /* Color de los botones generales */
+    button[kind="primary"] {
+        background-color: #28a745 !important;
+        color: white !important;
     }
-    /* 4. Forzar color primario de la app a verde para otros elementos */
-    :root {
-        --primary-color: #28a745;
+    
+    /* Ajuste para que el texto de la opción seleccionada no se pierda */
+    div[data-testid="stRadio"] label {
+        color: inherit !important;
     }
     </style>
     """, unsafe_allow_html=True)
 
-# --- CONFIGURACIÓN DE LECTURA ---
+# --- CONFIGURACIÓN DE LECTURA (SE MANTIENE IGUAL) ---
 ID_SHEET = "1wR4oDqNV5QheGx7wp-H9-s6De2IMAynSf_9vLGbE5qI"
 URL_LISTADO = f"https://docs.google.com/spreadsheets/d/{ID_SHEET}/export?format=csv&gid=320023"
 URL_DOCENTES = f"https://docs.google.com/spreadsheets/d/{ID_SHEET}/export?format=csv&gid=1283708974"
@@ -40,7 +50,6 @@ def cargar_datos(url):
     df.columns = df.columns.str.strip()
     return df
 
-# URL de tu Google Form
 FORM_URL = "https://docs.google.com/forms/d/e/1FAIpQLSef94w2FNw2XTqRo9ZRnhURSOJx-5iUqeeVZ5kqqASLiTYF0A/formResponse"
 
 try:
@@ -83,7 +92,6 @@ try:
                     )
                 st.markdown("---")
 
-        # --- PASO 1: GUARDAR Y REVISAR ---
         if st.button("🔍 1. GUARDAR Y REVISAR"):
             fecha_str = fecha_hoy.strftime("%d/%m/%Y")
             resumen_lista = []
@@ -98,19 +106,15 @@ try:
                     "V/F": asistencias[nna],
                     "Obs": observaciones[nna]
                 })
-            
             st.session_state.datos_a_enviar = resumen_lista
-            st.success("✅ Datos guardados temporalmente. Revísalos abajo.")
+            st.success("✅ Datos listos para revisar.")
             st.table(pd.DataFrame(resumen_lista))
 
-        # --- PASO 2: ENVIAR DEFINITIVO ---
         if "datos_a_enviar" in st.session_state:
-            st.warning("⚠️ Revisa la tabla superior. Si es correcta, pulsa el botón de abajo.")
             if st.button("🚀 2. CONFIRMAR Y ENVIAR AL HISTORIAL"):
                 exitos = 0
                 total = len(st.session_state.datos_a_enviar)
-                
-                with st.spinner("Enviando registros..."):
+                with st.spinner("Enviando..."):
                     for dato in st.session_state.datos_a_enviar:
                         form_data = {
                             "entry.883067698": dato["Fecha"],
@@ -123,17 +127,15 @@ try:
                         }
                         try:
                             response = requests.post(FORM_URL, data=form_data)
-                            if response.status_code == 200:
-                                exitos += 1
-                        except:
-                            pass
+                            if response.status_code == 200: exitos += 1
+                        except: pass
                 
                 if exitos == total:
-                    st.success(f"✅ ¡Éxito! Se enviaron los {exitos} registros.")
+                    st.success(f"✅ ¡Enviado!")
                     st.balloons()
                     del st.session_state.datos_a_enviar
                 else:
-                    st.error(f"Error: Solo se enviaron {exitos} de {total}.")
+                    st.error(f"Error en el envío.")
 
 except Exception as e:
     st.error(f"Error: {e}")
