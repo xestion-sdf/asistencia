@@ -14,8 +14,7 @@ def cargar_datos(url):
     df = pd.read_csv(url_final)
     df.columns = df.columns.str.strip()
     
-    # --- SOLUCIÓN AL ERROR DE TIPO DE DATOS ---
-    # Forzamos a que estas columnas sean SIEMPRE texto, incluso si están vacías
+    # Aseguramos que las columnas sean texto para evitar el error de FLOAT
     columnas_texto = ["V/F", "Actitud", "Observaciones", "Nota"]
     for col in columnas_texto:
         if col in df.columns:
@@ -42,21 +41,20 @@ try:
     elif not df_filtrado.empty:
         st.subheader(f"Lista de {orquesta_sel}")
         
-        # TABLA DEFINITIVA
+        # --- EL CAMBIO ESTÁ AQUÍ ---
         df_editado = st.data_editor(
             df_filtrado[["NNA", "Instrumento", "V/F", "Actitud", "Nota", "Observaciones"]],
             column_config={
                 "NNA": st.column_config.Column("Alumno", disabled=True),
                 "Instrumento": st.column_config.Column("Instrumento", disabled=True),
+                
+                # Configuramos V/F como un desplegable (Selectbox)
                 "V/F": st.column_config.SelectboxColumn(
                     "Asistencia",
-                    options=["P", "FX", "FNX"]
+                    options=["P", "FX", "FNX"],
+                    required=True
                 ),
-                "Actitud": st.column_config.SelectboxColumn(
-                    "Actitud",
-                    options=["🌟 Excelente", "✅ Bien", "⚠️ Regular", "❌ Mal"]
-                ),
-                "Nota": st.column_config.Column("Nota (1-5)"),
+                
                 "Observaciones": st.column_config.TextColumn("Observaciones", width="large")
             },
             hide_index=True,
@@ -65,7 +63,6 @@ try:
         
         if st.button("🚀 Procesar Asistencia"):
             st.success("¡Datos capturados correctamente!")
-            st.balloons()
             st.dataframe(df_editado)
             
     else:
