@@ -111,83 +111,17 @@ try:
 
 
 # ---------------------------------------------------------
-    # PÁGINA 2: EVALUACIÓN INTEGRAL
+    # PÁGINA 2 Y 3: Mismo esquema para Evaluación (Estructura base)
     # ---------------------------------------------------------
     elif menu == "🎻 Evaluación Técnica":
-        st.header("Evaluación Integral de Desempeño")
-        st.info("Despliega cada alumno para calificar los 4 indicadores (1: Inicial - 5: Excelente)")
-        
-        eval_completa = {}
+        st.header("Evaluación Técnica (Escala 1-5)")
+        # Lógica similar para Técnica...
+        st.info("Pestaña en desarrollo: Configura el nuevo formulario para activar el envío.")
 
-        for i, row in df_filtrado.iterrows():
-            # El expander permite que la lista no sea kilométrica
-            with st.expander(f"👤 {row['NNA']} ({row['Instrumento']})"):
-                c1, c2 = st.columns(2)
-                
-                with c1:
-                    nota_tec = st.radio(f"Técnica - {row['NNA']}", ["1", "2", "3", "4", "5"], 
-                                        horizontal=True, key=f"tec_{i}", index=2)
-                    nota_lec = st.radio(f"Lectura - {row['NNA']}", ["1", "2", "3", "4", "5"], 
-                                        horizontal=True, key=f"lec_{i}", index=2)
-                
-                with c2:
-                    nota_par = st.radio(f"Participación - {row['NNA']}", ["1", "2", "3", "4", "5"], 
-                                        horizontal=True, key=f"par_{i}", index=4)
-                    nota_mat = st.radio(f"Responsabilidad - {row['NNA']}", ["1", "2", "3", "4", "5"], 
-                                        horizontal=True, key=f"mat_{i}", index=4)
-                
-                eval_completa[row['NNA']] = {
-                    "Tecnica": nota_tec,
-                    "Lectura": nota_lec,
-                    "Participacion": nota_par,
-                    "Responsabilidad": nota_mat,
-                    "Instrumento": row['Instrumento']
-                }
+    elif menu == "🧠 Evaluación Actitudinal":
+        st.header("Evaluación Actitudinal (Escala 1-5)")
+        # Lógica similar para Actitud...
+        st.info("Pestaña en desarrollo: Configura el nuevo formulario para activar el envío.")
 
-        # BOTÓN 1: GUARDAR Y MOSTRAR TABLA
-        if st.button("🔍 1. GUARDAR Y REVISAR EVALUACIÓN"):
-            fecha_str = fecha_hoy.strftime("%d/%m/%Y")
-            resumen_eval = []
-            for nna, v in eval_completa.items():
-                resumen_eval.append({
-                    "Fecha": fecha_str,
-                    "Orquesta": orquesta_sel,
-                    "Docente": docente_sel,
-                    "NNA": nna,
-                    "Instrumento": v["Instrumento"],
-                    "Téc": v["Tecnica"],
-                    "Lec": v["Lectura"],
-                    "Par": v["Participacion"],
-                    "Res": v["Responsabilidad"]
-                })
-            st.session_state.temp_eval = resumen_eval
-            st.success("✅ Revisión lista. Ver tabla abajo.")
-            st.table(pd.DataFrame(resumen_eval))
-
-        # BOTÓN 2: ENVÍO DEFINITIVO (Solo si hay datos guardados)
-        if "temp_eval" in st.session_state:
-            st.warning("⚠️ ¿Todo correcto? Pulsa el botón para enviar al historial.")
-            if st.button("🚀 2. CONFIRMAR ENVÍO DE EVALUACIÓN"):
-                exitos = 0
-                with st.spinner("Enviando..."):
-                    for d in st.session_state.temp_eval:
-                        # RECUERDA CAMBIAR ESTOS IDS POR LOS DE TU NUEVO FORMULARIO
-                        form_data = {
-                            "entry.883067698": d["Fecha"],
-                            "entry.695473946": d["Orquesta"],
-                            "entry.252597218": d["Docente"],
-                            "entry.1616335440": d["NNA"],
-                            "entry.1668643155": d["Instrumento"],
-                            "entry.111111111": d["Téc"], # Reemplazar ID
-                            "entry.222222222": d["Lec"], # Reemplazar ID
-                            "entry.333333333": d["Par"], # Reemplazar ID
-                            "entry.444444444": d["Res"]  # Reemplazar ID
-                        }
-                        try:
-                            # Aquí usas la URL del formulario de evaluación
-                            requests.post(FORM_URL_EVAL, data=form_data)
-                            exitos += 1
-                        except:
-                            pass
-                st.success(f"✅ ¡Evaluación enviada! ({exitos} registros)")
-                del st.session_state.temp_eval
+except Exception as e:
+    st.error(f"Error: {e}")
