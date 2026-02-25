@@ -24,7 +24,7 @@ URL_DOCENTES = f"https://docs.google.com/spreadsheets/d/{ID_SHEET}/export?format
 URL_HISTORIAL = f"https://docs.google.com/spreadsheets/d/{ID_SHEET}/export?format=csv&gid=827716903"
 
 # --- IMPORTANTE: Verifica que este GID sea el de la hoja "Respuestas de formulario 1" ---
-GID_HISTORIAL = "0" # Por defecto suele ser 0 o el que veas en la URL
+GID_HISTORIAL = "827716903" # Por defecto suele ser 0 o el que veas en la URL
 URL_HISTORIAL = f"https://docs.google.com/spreadsheets/d/{ID_SHEET}/export?format=csv&gid={GID_HISTORIAL}"
 
 @st.cache_data(ttl=30)
