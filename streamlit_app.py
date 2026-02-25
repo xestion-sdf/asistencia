@@ -43,7 +43,7 @@ FORM_ASISTENCIA = "https://docs.google.com/forms/d/e/1FAIpQLSef94w2FNw2XTqRo9ZRn
 # --- 3. BARRA LATERAL ---
 # Usamos un ancho fijo (puedes probar con 60, 80 o 100 píxeles)
 try:
-    st.sidebar.image("avatar-sdf.png", width=70) 
+    st.sidebar.image("avatar-sdf.png", width=50) 
 except:
     pass
 st.sidebar.title("🎵 SDF Panel")
