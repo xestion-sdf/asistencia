@@ -17,11 +17,11 @@ st.markdown("""
     """, unsafe_allow_html=True)
 
 # --- 2. CARGA DE DATOS ---
-GID_HISTORIAL = "827716903"
+
 ID_SHEET = "1wR4oDqNV5QheGx7wp-H9-s6De2IMAynSf_9vLGbE5qI"
 URL_LISTADO = f"https://docs.google.com/spreadsheets/d/{ID_SHEET}/export?format=csv&gid=320023"
 URL_DOCENTES = f"https://docs.google.com/spreadsheets/d/{ID_SHEET}/export?format=csv&gid=1283708974"
-URL_HISTORIAL = f"https://docs.google.com/spreadsheets/d/{ID_SHEET}/export?format=csv&gid={GID_HISTORIAL}"
+URL_HISTORIAL = f"https://docs.google.com/spreadsheets/d/{ID_SHEET}/export?format=csv&gid=827716903"
 
 # --- IMPORTANTE: Verifica que este GID sea el de la hoja "Respuestas de formulario 1" ---
 GID_HISTORIAL = "0" # Por defecto suele ser 0 o el que veas en la URL
